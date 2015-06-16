@@ -28,6 +28,7 @@
 #include "nsICloudStorageInterface.h"
 #include "mozilla/Services.h"
 #include "nsCOMPtr.h"
+#include "nsThreadUtils.h"
 
 namespace mozilla {
 namespace system {
@@ -39,10 +40,17 @@ public:
   CloudStorageRequestRunnable(CloudStorage* aCloudStorage)
     : mCloudStorage(aCloudStorage)
   {
+    LOG("create cloudstoragerequestrunnable");
+  }
+
+  ~CloudStorageRequestRunnable()
+  {
+    LOG("destroy cloudstoragerequestrunable");
   }
 
   nsresult Run()
-  {     
+  {
+    LOG("in CloudStorageRequestRunnable::Run");
     nsresult rv;
     if (!mInterface) {
       mInterface = do_CreateInstance("@mozilla.org/cloudstorageinterface;1", &rv);
@@ -350,6 +358,7 @@ CloudStorageRequestHandler::SendRequestToMainThread()
   if (NS_FAILED(rv)) {
     LOG("fail to dispatch to main thread [%x]", rv);
   }
+  LOG("return value: 0x%x", rv);
   while (mCloudStorage->IsWaitForRequest() && mCloudStorage->State() == CloudStorage::STATE_RUNNING) {
     usleep(10);
   }
@@ -596,6 +605,7 @@ CloudStorageRequestHandler::HandleRead(const FuseInHeader* hdr, const FuseReadIn
   reqData.Size = req->size;
   reqData.Offset = req->offset;
   mCloudStorage->SetRequestData(reqData);
+
   SendRequestToMainThread();
 
   if (mCloudStorage->State() == CloudStorage::STATE_RUNNING) {
@@ -744,15 +754,16 @@ CloudStorageRequestHandler::HandleReadDir(const FuseInHeader* hdr, const FuseRea
   fde->ino = FUSE_UNKNOWN_INO;
   fde->off = req->offset + 1;
   nsCString entryName;
- 
-  entryName = mCloudStorage->GetEntryByPathAndOffset(path, req->offset);
-  if (entryName.Equals(NS_LITERAL_CSTRING(""))) {
+
+  bool needUpdate;
+  entryName = mCloudStorage->GetEntryByPathAndOffset(path, req->offset, needUpdate);
+  if (entryName.Equals(NS_LITERAL_CSTRING("")) && needUpdate) {
     CloudStorageRequestData reqData;
     reqData.RequestType = (uint32_t) FUSE_READDIR;
     reqData.Path = path;
     mCloudStorage->SetRequestData(reqData);
     SendRequestToMainThread();
-    entryName = mCloudStorage->GetEntryByPathAndOffset(path, req->offset);
+    entryName = mCloudStorage->GetEntryByPathAndOffset(path, req->offset, needUpdate);
   }
 
   if (mCloudStorage->State() == CloudStorage::STATE_RUNNING) {

@@ -110,7 +110,7 @@ public:
   void SetAttrByPath(nsCString aPath, bool aIsDir, uint64_t aSize, uint64_t aMTime, uint64_t aCTime);
   void RemoveAttrByPath(nsCString aPath);
 
-  nsCString GetEntryByPathAndOffset(nsCString aPath, uint64_t aOffset);
+  nsCString GetEntryByPathAndOffset(nsCString aPath, uint64_t aOffset, bool& needUpdate);
   void AddEntryByPath(nsCString aPath, nsCString aEntry);
   void RemoveEntryByPath(nsCString aPath, nsCString aEntry);
 

@@ -277,11 +277,13 @@ CloudStorage::RemoveEntryByPath(nsCString aPath, nsCString aEntry)
 }
 
 nsCString
-CloudStorage::GetEntryByPathAndOffset(nsCString aPath, uint64_t aOffset)
+CloudStorage::GetEntryByPathAndOffset(nsCString aPath, uint64_t aOffset, bool& needUpdate)
 {
+  needUpdate = true;
   nsTArray<nsCString > entryList;
   if (mEntryListHashTable.Get(aPath, &entryList)) {
     if (aOffset >= entryList.Length()) {
+      needUpdate = false;
       return NS_LITERAL_CSTRING("");
     }
     return entryList[aOffset];

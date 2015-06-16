@@ -32,8 +32,8 @@ function nsCloudStorageInterface() {
   log("call udManager.init()");
   udManager.init({
       accessToken:
-        '<ACCESS_TOKEN>',
-      webStorageModule: Sample,
+        'NH1e61UR7X4AAAAAAAAhX6GJ6G0RNOh97PtqgFRlcCfOmmBVtPAgh7hWTyspf3V5',
+      webStorageModule: Dropbox,
       metaCacheModule: MetaCache,
       dataCacheModule: DataCache
   })
