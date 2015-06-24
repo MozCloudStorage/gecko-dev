@@ -47,6 +47,7 @@ nsCloudStorageInterface.prototype = {
   getFileMeta: function(cloudname, path) {
     log("cloudname: " + cloudname + " " + "path: " + path);
     log("call udManager.getFileMeta");
+    var endRequest = false;
     udManager.getFileMeta(path, function(error, response) {
       log(JSON.stringify(response.data));
       var cls, instance;
@@ -62,6 +63,7 @@ nsCloudStorageInterface.prototype = {
   getFileList: function(cloudname, path) {
     log("cloudname: " + cloudname + " " + "path: " + path);
     log("call udManager.getFileList");
+    var endRequest = false;
     udManager.getFileList(path, function (error, response) {
       log(JSON.stringify(response.data));
       var cls, instance;
@@ -79,6 +81,7 @@ nsCloudStorageInterface.prototype = {
     log("cloudname: " + cloudname + " " + "path: " + path);
     log("call udManager.downloadFileInRange");
     var buffer = new Uint8Array(size);
+    var endRequest = false
     udManager.downloadFileInRangeByCache(path, buffer, offset, size, function () {
       var cls, instance;
       cls = Components.classes["@mozilla.org/cloudstoragegeckointerface;1"];
@@ -86,6 +89,7 @@ nsCloudStorageInterface.prototype = {
       instance.setData(cloudname, buffer, buffer.byteLength);
       instance.finishRequest(cloudname);
     });
+    log("finish getData");
   }
 };
 

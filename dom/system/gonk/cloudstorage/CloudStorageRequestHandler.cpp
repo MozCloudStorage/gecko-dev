@@ -40,12 +40,12 @@ public:
   CloudStorageRequestRunnable(CloudStorage* aCloudStorage)
     : mCloudStorage(aCloudStorage)
   {
-    LOG("create cloudstoragerequestrunnable");
+    LOG("create cloudstoragerequestrunnable 0x%x", (uint32_t)this);
   }
 
   ~CloudStorageRequestRunnable()
   {
-    LOG("destroy cloudstoragerequestrunable");
+    LOG("destroy cloudstoragerequestrunable 0x%x", (uint32_t)this);
   }
 
   nsresult Run()
@@ -94,6 +94,10 @@ public:
         }
       }
     }
+    if (mCloudStorage->IsWaitForRequest() && mCloudStorage->State() == CloudStorage::STATE_RUNNING) {
+      usleep(10);
+    }
+    LOG("finish request runnable");
     return NS_OK;
   }
 private:
@@ -358,7 +362,6 @@ CloudStorageRequestHandler::SendRequestToMainThread()
   if (NS_FAILED(rv)) {
     LOG("fail to dispatch to main thread [%x]", rv);
   }
-  LOG("return value: 0x%x", rv);
   while (mCloudStorage->IsWaitForRequest() && mCloudStorage->State() == CloudStorage::STATE_RUNNING) {
     usleep(10);
   }

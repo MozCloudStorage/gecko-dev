@@ -34,6 +34,7 @@ nsCloudStorageGeckoInterface::FinishRequest(const nsACString_internal& aCloudNam
   nsCString cloudName(aCloudName);
   RefPtr<CloudStorage> cloudStorage = CloudStorageManager::FindCloudStorageByName(cloudName);
   cloudStorage->SetWaitForRequest(false);
+  LOG("nsCloudStorageGeckoInterface::FinishRequest");
   return NS_OK;
 }
 
@@ -73,6 +74,7 @@ nsCloudStorageGeckoInterface::SetFileList(const nsACString_internal& aCloudName,
   }
   cloudStorage->SetAttrByPath(childPath, aIsDir, aSize, aMTime, aCTime);
   cloudStorage->AddEntryByPath(path, entry);
+  LOG("nsCloudStorageGeckoInterface::SetFileList");
   return NS_OK;
 }
 
@@ -88,5 +90,6 @@ nsCloudStorageGeckoInterface::SetData(const nsACString_internal& aCloudName,
   RefPtr<CloudStorage> cloudStorage = CloudStorageManager::FindCloudStorageByName(cloudName);
   cloudStorage->SetDataBuffer(buffer, aSize);
   free(buffer);
+  LOG("nsCloudStorageGeckoInterface::SetData");
   return NS_OK;
 }
