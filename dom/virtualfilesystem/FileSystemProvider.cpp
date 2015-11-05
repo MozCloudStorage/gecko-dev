@@ -181,8 +181,8 @@ FileSystemProvider::OnSuccess(uint32_t aRequestId,
                               nsIVirtualFileSystemRequestValue* aValue,
                               bool aHasMore)
 {
-  unused << aValue;
-  unused << aHasMore;
+  //unused << aValue;
+  //unused << aHasMore;
 
   auto it = mPendingRequestPromises.find(aRequestId);
   if (NS_WARN_IF(it == mPendingRequestPromises.end())) {
