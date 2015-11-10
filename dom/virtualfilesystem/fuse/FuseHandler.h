@@ -11,7 +11,6 @@
 #include "nsString.h"
 #include "nsIThread.h"
 #include "nsDataHashtable.h"
-#include "nsRefPtrHashtable.h"
 #include "nsArray.h"
 
 // the android fuse related data structure from /system/core/sdcard
@@ -78,9 +77,6 @@ private:
   Monitor mMonitor;
   nsCOMPtr<nsIThread> mRunnableThread;
 };
-
-typedef nsRefPtrHashtable<nsStringHashKey, FuseHandler> FuseHandlerHashtable;
-static FuseHandlerHashtable sFuseHandlerTable;
 
 } // end namespace virtualfilesystem
 } // end namespace dom

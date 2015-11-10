@@ -55,8 +55,8 @@ nsVirtualFileSystemOpenFileCallback::nsVirtualFileSystemOpenFileCallback(
 
 NS_IMETHODIMP
 nsVirtualFileSystemOpenFileCallback::OnSuccess(const uint32_t aRequestId,
-                                            nsIVirtualFileSystemRequestValue* aValue,
-                                            const bool aHasMore)
+                                               nsIVirtualFileSystemRequestValue* aValue,
+                                               const bool aHasMore)
 {
   MOZ_ASSERT(mVirtualFileSystem);
   MOZ_ASSERT(mFileInfo);
@@ -66,7 +66,7 @@ nsVirtualFileSystemOpenFileCallback::OnSuccess(const uint32_t aRequestId,
 
 NS_IMETHODIMP
 nsVirtualFileSystemOpenFileCallback::OnError(const uint32_t aRequestId,
-                                           const uint32_t aError)
+                                             const uint32_t aError)
 {
   MOZ_ASSERT(mVirtualFileSystem);
   return mVirtualFileSystem->OnRequestError(aRequestId, aError);
@@ -96,7 +96,7 @@ nsVirtualFileSystemCloseFileCallback::OnSuccess(const uint32_t aRequestId,
 
 NS_IMETHODIMP
 nsVirtualFileSystemCloseFileCallback::OnError(const uint32_t aRequestId,
-                                           const uint32_t aError)
+                                              const uint32_t aError)
 {
   MOZ_ASSERT(mVirtualFileSystem);
   return mVirtualFileSystem->OnRequestError(aRequestId, aError);

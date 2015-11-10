@@ -5,10 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderReadDirectoryEvent.h"
-#include "nsVirtualFileSystemData.h"
+#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsCOMArray.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -28,7 +27,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ReadDirectoryRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(ReadDirectoryRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemReadDirectoryRequestOption)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemReadDirectoryRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 JSObject*
@@ -77,18 +76,16 @@ FileSystemProviderReadDirectoryEvent::Options() const
 
 nsresult
 FileSystemProviderReadDirectoryEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestOption> option = do_QueryInterface(aOption);
-  if (!option) {
+  nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
     MOZ_ASSERT(false);
     return NS_ERROR_INVALID_ARG;
   }
 
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("readdirectoryrequested"),
-                                      aRequestId,
-                                      option);
+                                      options);
   return NS_OK;
 }
 

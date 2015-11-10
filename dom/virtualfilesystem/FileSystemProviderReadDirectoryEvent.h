@@ -13,22 +13,20 @@
 #include "mozilla/dom/FileSystemProviderReadDirectoryEventBinding.h"
 #include "nsWrapperCache.h"
 
-class nsIVirtualFileSystemReadDirectoryRequestOption;
-
 namespace mozilla {
 namespace dom {
 
 struct EntryMetadata;
 
 class ReadDirectoryRequestedOptions final : public FileSystemProviderRequestedOptions
-                                          , public nsIVirtualFileSystemReadDirectoryRequestOption
+                                          , public nsIVirtualFileSystemReadDirectoryRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ReadDirectoryRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTOPTION(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMREADDIRECTORYREQUESTOPTION
+  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
+  NS_DECL_NSIVIRTUALFILESYSTEMREADDIRECTORYREQUESTEDOPTIONS
 
   explicit ReadDirectoryRequestedOptions() = default;
 
@@ -56,8 +54,8 @@ public:
 
   ReadDirectoryRequestedOptions* Options() const;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) override;
+  virtual nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback(const Sequence<EntryMetadata>& aEntries, bool aHasMore);
 

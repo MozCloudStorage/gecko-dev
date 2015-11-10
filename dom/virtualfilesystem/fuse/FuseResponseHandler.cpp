@@ -4,6 +4,7 @@
 
 #include "FuseResponseHandler.h"
 #include "nsArrayUtils.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/mount.h>
@@ -33,6 +34,7 @@ namespace dom {
 namespace virtualfilesystem {
 
 // FuseResponseHandler
+NS_IMPL_ISUPPORTS(FuseResponseHandler, nsIVirtualFileSystemResponseHandler)
 
 FuseResponseHandler::FuseResponseHandler(FuseHandler* aFuseHandler)
  : mHandler(aFuseHandler)

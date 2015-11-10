@@ -6,7 +6,6 @@
 
 #include "mozilla/dom/FileSystemProviderReadFileEvent.h"
 #include "nsVirtualFileSystemRequestValue.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -26,7 +25,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ReadFileRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(ReadFileRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemReadFileRequestOption)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemReadFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 JSObject*
@@ -115,18 +114,16 @@ FileSystemProviderReadFileEvent::Options() const
 
 nsresult
 FileSystemProviderReadFileEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadFileRequestOption> option = do_QueryInterface(aOption);
-  if (!option) {
+  nsCOMPtr<nsIVirtualFileSystemReadFileRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
     MOZ_ASSERT(false);
     return NS_ERROR_INVALID_ARG;
   }
 
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("readfilerequested"),
-                                      aRequestId,
-                                      option);
+                                      options);
   return NS_OK;
 }
 

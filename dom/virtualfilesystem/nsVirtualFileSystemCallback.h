@@ -40,7 +40,7 @@ public:
 
   nsVirtualFileSystemOpenFileCallback() = default;
   nsVirtualFileSystemOpenFileCallback(nsIVirtualFileSystem* aVirtualFileSystem,
-                                 nsIVirtualFileSystemOpenedFileInfo* aFileInfo);
+                                      nsIVirtualFileSystemOpenedFileInfo* aFileInfo);
 
 private:
   ~nsVirtualFileSystemOpenFileCallback() = default;
@@ -57,7 +57,7 @@ public:
 
   nsVirtualFileSystemCloseFileCallback() = default;
   nsVirtualFileSystemCloseFileCallback(nsIVirtualFileSystem* aVirtualFileSystem,
-                                  const uint32_t aOpenedFileId);
+                                       const uint32_t aOpenedFileId);
 
 private:
   ~nsVirtualFileSystemCloseFileCallback() = default;

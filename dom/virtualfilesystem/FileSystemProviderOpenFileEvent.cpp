@@ -5,7 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderOpenFileEvent.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -25,7 +24,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(OpenFileRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(OpenFileRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemOpenFileRequestOption)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemOpenFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 JSObject*
@@ -92,18 +91,16 @@ FileSystemProviderOpenFileEvent::Options() const
 
 nsresult
 FileSystemProviderOpenFileEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemOpenFileRequestOption> option = do_QueryInterface(aOption);
-  if (!option) {
+  nsCOMPtr<nsIVirtualFileSystemOpenFileRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
     MOZ_ASSERT(false);
     return NS_ERROR_INVALID_ARG;
   }
 
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("openfilerequested"),
-                                      aRequestId,
-                                      option);
+                                      options);
   return NS_OK;
 }
 

@@ -18,7 +18,7 @@ NS_IMPL_CYCLE_COLLECTING_RELEASE(FileSystemProviderRequestedOptions)
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(FileSystemProviderRequestedOptions)
   NS_WRAPPERCACHE_INTERFACE_MAP_ENTRY
   NS_INTERFACE_MAP_ENTRY(nsISupports)
-  NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemRequestOption)
+  NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemRequestedOptions)
 NS_INTERFACE_MAP_END
 
 JSObject*
@@ -39,6 +39,24 @@ NS_IMETHODIMP
 FileSystemProviderRequestedOptions::SetFileSystemId(const nsAString& aFileSystemId)
 {
   mFileSystemId = aFileSystemId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+FileSystemProviderRequestedOptions::GetRequestId(uint32_t* aRequestId)
+{
+  if (NS_WARN_IF(!aRequestId)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aRequestId = mRequestId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+FileSystemProviderRequestedOptions::SetRequestId(uint32_t aRequestId)
+{
+  mRequestId = aRequestId;
   return NS_OK;
 }
 
@@ -104,14 +122,12 @@ FileSystemProviderEvent::ErrorCallback(const FileSystemProviderError& aError)
 
 void
 FileSystemProviderEvent::InitFileSystemProviderEventInternal(const nsAString& aType,
-                                                             uint32_t aRequestId,
-                                                             nsIVirtualFileSystemRequestOption* aOption)
+                                                             nsIVirtualFileSystemRequestedOptions* aOptions)
 {
   Event::InitEvent(aType, false, false);
 
-  mOptions = static_cast<FileSystemProviderRequestedOptions*>(aOption);
+  mOptions = static_cast<FileSystemProviderRequestedOptions*>(aOptions);
   mOptions->SetParentObject(mOwner);
-  mOptions->SetRequestId(aRequestId);
 }
 
 } // namespace dom

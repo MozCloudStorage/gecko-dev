@@ -4,7 +4,7 @@
 
 #include "nsISupports.idl"
 
-interface nsIVirtualFileSystemRequestOption;
+interface nsIVirtualFileSystemRequestedOptions;
 
 [scriptable, uuid(e162a1ff-a758-4bf9-85ec-98d1a94b1f24)]
 interface nsIFileSystemProviderEventDispatcher : nsISupports
@@ -14,9 +14,9 @@ interface nsIFileSystemProviderEventDispatcher : nsISupports
    *
    * @param requestId   The ID of the request.
    * @param requestType The type that incidates which event should be generated.
-   * @param option      The option for the request.
+   * @param options     The options for the request.
    */
   void dispatchFileSystemProviderEvent(in unsigned long requestId,
                                        in unsigned long requestType,
-                                       in nsIVirtualFileSystemRequestOption option);
+                                       in nsIVirtualFileSystemRequestedOptions options);
 };

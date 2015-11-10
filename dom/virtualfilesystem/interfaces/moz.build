@@ -8,8 +8,8 @@ XPIDL_SOURCES += [
     'nsIFileSystemProviderEventDispatcher.idl',
     'nsIVirtualFileSystem.idl',
     'nsIVirtualFileSystemCallback.idl',
+    'nsIVirtualFileSystemDataType.idl',
     'nsIVirtualFileSystemRequestManager.idl',
-    'nsIVirtualFileSystemRequestOption.idl',
     'nsIVirtualFileSystemResponseHandler.idl',
     'nsIVirtualFileSystemService.idl',
 ]

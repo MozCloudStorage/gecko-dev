@@ -5,9 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderGetMetadataEvent.h"
-#include "nsVirtualFileSystemData.h"
+#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -27,7 +26,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(GetMetadataRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(GetMetadataRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemGetMetadataRequestOption)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemGetMetadataRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 JSObject*
@@ -76,18 +75,16 @@ FileSystemProviderGetMetadataEvent::Options() const
 
 nsresult
 FileSystemProviderGetMetadataEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestOption> option = do_QueryInterface(aOption);
-  if (!option) {
+  nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
     MOZ_ASSERT(false);
     return NS_ERROR_INVALID_ARG;
   }
 
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("getmetadatarequested"),
-                                      aRequestId,
-                                      option);
+                                      options);
   return NS_OK;
 }
 

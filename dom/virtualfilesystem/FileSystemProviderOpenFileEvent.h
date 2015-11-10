@@ -14,22 +14,24 @@
 #include "mozilla/dom/FileSystemProviderOpenFileEventBinding.h"
 #include "nsWrapperCache.h"
 
-class nsIVirtualFileSystemOpenFileRequestOption;
-
 namespace mozilla {
 namespace dom {
 
-class OpenFileRequestedOptions final : public FileSystemProviderRequestedOptions
-                                     , public nsIVirtualFileSystemOpenFileRequestOption
+class OpenFileRequestedOptions : public FileSystemProviderRequestedOptions
+                               , public nsIVirtualFileSystemOpenFileRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(OpenFileRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTOPTION(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMOPENFILEREQUESTOPTION
+  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
+  NS_DECL_NSIVIRTUALFILESYSTEMOPENFILEREQUESTEDOPTIONS
 
   explicit OpenFileRequestedOptions() = default;
+  explicit OpenFileRequestedOptions(const nsAString& aFilePath, uint32_t aMode)
+    : mFilePath(aFilePath)
+    , mMode(static_cast<OpenFileMode>(aMode))
+  {}
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -43,8 +45,8 @@ public:
     return mMode;
   }
 
-private:
-  ~OpenFileRequestedOptions() {}
+protected:
+  ~OpenFileRequestedOptions() = default;
 
   nsString mFilePath;
   OpenFileMode mMode;
@@ -61,8 +63,8 @@ public:
 
   OpenFileRequestedOptions* Options() const;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) override;
+  virtual nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

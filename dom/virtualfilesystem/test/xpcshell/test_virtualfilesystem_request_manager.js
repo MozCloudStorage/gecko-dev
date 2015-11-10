@@ -15,7 +15,7 @@ var emptyCallback = {
 };
 
 var option = {
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIVirtualFileSystemGetMetadataRequestOption]),
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsIVirtualFileSystemGetMetadataRequestedOptions]),
 
   fileSystemId: dummyFileSystemId,
 
@@ -83,7 +83,7 @@ add_test(function test_virtualfilesystem__dispatcher() {
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIFileSystemProviderEventDispatcher]),
 
     dispatchFileSystemProviderEvent: function(aRequestId, aType, aOption) {
-      var getMetadataOption = aOption.QueryInterface(Ci.nsIVirtualFileSystemGetMetadataRequestOption);
+      var getMetadataOption = aOption.QueryInterface(Ci.nsIVirtualFileSystemGetMetadataRequestedOptions);
       do_check_true(aRequestId > 0);
       equal(aType, Ci.nsIVirtualFileSystemRequestManager.REQUEST_GETMETADATA);
       equal(getMetadataOption.fileSystemId, dummyFileSystemId);

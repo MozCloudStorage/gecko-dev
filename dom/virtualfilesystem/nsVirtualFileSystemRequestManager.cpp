@@ -21,9 +21,9 @@ class RunVirtualFileSystemSuccessCallback : public nsRunnable
 {
 public:
   explicit RunVirtualFileSystemSuccessCallback(nsIVirtualFileSystemCallback* aCallback,
-                                          uint32_t aRequestId,
-                                          nsIVirtualFileSystemRequestValue* aValue,
-                                          bool aHasMore)
+                                               uint32_t aRequestId,
+                                               nsIVirtualFileSystemRequestValue* aValue,
+                                               bool aHasMore)
     : mCallback(aCallback)
     , mRequestId(aRequestId)
     , mValue(aValue)
@@ -48,8 +48,8 @@ class RunVirtualFileSystemErrorCallback : public nsRunnable
 {
 public:
   explicit RunVirtualFileSystemErrorCallback(nsIVirtualFileSystemCallback* aCallback,
-                                        uint32_t aRequestId,
-                                        uint32_t aErrorCode)
+                                             uint32_t aRequestId,
+                                             uint32_t aErrorCode)
     : mCallback(aCallback)
     , mRequestId(aRequestId)
     , mErrorCode(aErrorCode)
@@ -72,7 +72,7 @@ class DispatchRequestTask : public nsRunnable
 public:
   explicit DispatchRequestTask(uint32_t aRequestId,
                                uint32_t aRequestType,
-                               nsIVirtualFileSystemRequestOption* aOption,
+                               nsIVirtualFileSystemRequestedOptions* aOption,
                                nsIFileSystemProviderEventDispatcher* aDispatcher)
     : mRequestId(aRequestId)
     , mRequestType(aRequestType)
@@ -89,7 +89,7 @@ public:
 private:
   uint32_t mRequestId;
   uint32_t mRequestType;
-  nsCOMPtr<nsIVirtualFileSystemRequestOption> mOption;
+  nsCOMPtr<nsIVirtualFileSystemRequestedOptions> mOption;
   nsCOMPtr<nsIFileSystemProviderEventDispatcher> mDispatcher;
 };
 
@@ -97,9 +97,9 @@ NS_IMPL_ISUPPORTS0(nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest
 
 nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest
   ::nsVirtualFileSystemRequest(uint32_t aRequestType,
-                          uint32_t aRequestId,
-                          nsIVirtualFileSystemRequestOption* aOption,
-                          nsIVirtualFileSystemCallback* aCallback)
+                               uint32_t aRequestId,
+                               nsIVirtualFileSystemRequestedOptions* aOption,
+                               nsIVirtualFileSystemCallback* aCallback)
   : mRequestType(aRequestType)
   , mRequestId(aRequestId)
   , mOption(aOption)
@@ -129,9 +129,9 @@ nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequestManager(
 
 NS_IMETHODIMP
 nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
-                                            nsIVirtualFileSystemRequestOption *aOption,
-                                            nsIVirtualFileSystemCallback* aCallback,
-                                            uint32_t* aRequestId)
+                                                 nsIVirtualFileSystemRequestedOptions *aOption,
+                                                 nsIVirtualFileSystemCallback* aCallback,
+                                                 uint32_t* aRequestId)
 {
   if (NS_WARN_IF(!aRequestId)) {
     return NS_ERROR_INVALID_ARG;
@@ -153,12 +153,12 @@ nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
 
   MonitorAutoLock lock(mMonitor);
   RefPtr<nsVirtualFileSystemRequest> request = new nsVirtualFileSystemRequest(aRequestType,
-                                                                      ++mRequestId,
-                                                                      aOption,
-                                                                      aCallback);
+                                                                              ++mRequestId,
+                                                                              aOption,
+                                                                              aCallback);
   mRequestMap[mRequestId] = request;
   mRequestIdQueue.push_back(mRequestId);
-
+  aOption->SetRequestId(mRequestId);
   nsCOMPtr<nsIRunnable> dispatchTask = new DispatchRequestTask(mRequestId,
                                                                aRequestType,
                                                                aOption,
@@ -175,8 +175,8 @@ nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
 
 NS_IMETHODIMP
 nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
-                                            nsIVirtualFileSystemRequestValue* aValue,
-                                            bool aHasMore)
+                                                 nsIVirtualFileSystemRequestValue* aValue,
+                                                 bool aHasMore)
 {
   if (NS_WARN_IF(aHasMore && !aValue)) {
     return NS_ERROR_INVALID_ARG;
@@ -220,9 +220,9 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
     }
 
     nsCOMPtr<nsIRunnable> callback = new RunVirtualFileSystemSuccessCallback(req->mCallback,
-                                                                        req->mRequestId,
-                                                                        req->mValue,
-                                                                        false);
+                                                                             req->mRequestId,
+                                                                             req->mValue,
+                                                                             false);
     NS_DispatchToCurrentThread(callback);
     mRequestMap.erase(req->mRequestId);
     mRequestIdQueue.erase(it);
@@ -246,8 +246,8 @@ nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t a
 
   RefPtr<nsVirtualFileSystemRequest> request = mRequestMap[aRequestId];
   nsCOMPtr<nsIRunnable> callback = new RunVirtualFileSystemErrorCallback(request->mCallback,
-                                                                    aRequestId,
-                                                                    aErrorCode);
+                                                                         aRequestId,
+                                                                         aErrorCode);
   NS_DispatchToCurrentThread(callback);
   DestroyRequest(aRequestId);
   return NS_OK;

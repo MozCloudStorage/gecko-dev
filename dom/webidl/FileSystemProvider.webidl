@@ -81,7 +81,7 @@ interface FileSystemProvider : EventTarget {
 
   // Returns information about a file system with the passed fileSystemId.
   [Throws]
-  Promise<FileSystemInfo> get(DOMString fileSystemId);
+  FileSystemInfo get(DOMString fileSystemId);
 
   attribute EventHandler onunmountrequested;
   attribute EventHandler ongetmetadatarequested;

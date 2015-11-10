@@ -8,6 +8,7 @@
 #define mozilla_dom_FileSystemProvider_h
 
 #include <map>
+#include "mozilla/dom/FileSystemProviderBinding.h"
 #include "mozilla/DOMEventTargetHelper.h"
 #include "nsIVirtualFileSystemCallback.h"
 #include "nsIFileSystemProviderEventDispatcher.h"
@@ -55,7 +56,7 @@ public:
 
   already_AddRefed<Promise> Unmount(const UnmountOptions& aOptions, ErrorResult& aRv);
 
-  already_AddRefed<Promise> Get(const nsAString& aFileSystemId, ErrorResult& aRv);
+  void Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, ErrorResult& aRv);
 
 private:
   explicit FileSystemProvider(nsPIDOMWindow* aWindow);

@@ -4,41 +4,9 @@
 
 #include "nsISupports.idl"
 
-interface nsIArray;
-interface nsIEntryMetadata;
+interface nsIVirtualFileSystemInfo;
+interface nsIVirtualFileSystemOpenedFileInfo;
 interface nsIVirtualFileSystemRequestValue;
-
-/**
- * XPCOM component which represents an opened file.
- * This is the same as OpenedFile defined in FileSystemProvider.webidl.
- */
-[scriptable, uuid(11b1380b-08ad-456b-a906-44687c0e8c75)]
-interface nsIVirtualFileSystemOpenedFileInfo : nsISupports
-{
-  attribute unsigned long openRequestId;
-
-  attribute DOMString filePath;
-
-  attribute unsigned short mode;
-};
-
-/**
- * XPCOM component which represents a file system.
- * This is the same as FileSystemInfo defined in FileSystemProvider.webidl.
- */
-[scriptable, uuid(851c97c5-a46d-47a4-97f9-33707f6392ef)]
-interface nsIVirtualFileSystemInfo : nsISupports
-{
-  attribute DOMString fileSystemId;
-
-  attribute DOMString displayName;
-
-  attribute boolean writable;
-
-  attribute unsigned long openedFilesLimit;
-
-  attribute nsIArray openedFiles;
-};
 
 /**
  * XPCOM component which provides file system implementation.

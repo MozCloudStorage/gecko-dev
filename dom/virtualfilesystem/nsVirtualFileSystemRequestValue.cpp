@@ -5,7 +5,7 @@
 #include "mozilla/dom/FileSystemProviderGetMetadataEventBinding.h"
 #include "mozilla/dom/TypedArray.h"
 #include "nsArrayUtils.h"
-#include "nsVirtualFileSystemData.h"
+#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIMutableArray.h"

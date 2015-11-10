@@ -5,11 +5,34 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderUnmountEvent.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
 namespace dom {
+
+NS_IMPL_CYCLE_COLLECTION_CLASS(UnmountRequestedOptions)
+
+NS_IMPL_ADDREF_INHERITED(UnmountRequestedOptions, FileSystemProviderRequestedOptions)
+NS_IMPL_RELEASE_INHERITED(UnmountRequestedOptions, FileSystemProviderRequestedOptions)
+
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(UnmountRequestedOptions,
+                                                  FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(UnmountRequestedOptions,
+                                                FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(UnmountRequestedOptions)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemUnmountRequestedOptions)
+NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+JSObject*
+UnmountRequestedOptions::WrapObject(JSContext* aCx,
+                                    JS::Handle<JSObject*> aGivenProto)
+{
+  return UnmountRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
+}
 
 FileSystemProviderUnmountEvent::FileSystemProviderUnmountEvent(
   EventTarget* aOwner,
@@ -26,22 +49,26 @@ FileSystemProviderUnmountEvent::WrapObjectInternal(JSContext* aCx,
   return FileSystemProviderUnmountEventBinding::Wrap(aCx, this, aGivenProto);
 }
 
-FileSystemProviderRequestedOptions*
+UnmountRequestedOptions*
 FileSystemProviderUnmountEvent::Options() const
 {
   MOZ_ASSERT(mOptions);
 
-  return mOptions;
+  return static_cast<UnmountRequestedOptions*>(mOptions.get());;
 }
 
 nsresult
 FileSystemProviderUnmountEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
+  nsCOMPtr<nsIVirtualFileSystemUnmountRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false);
+    return NS_ERROR_INVALID_ARG;
+  }
+
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("unmountrequested"),
-                                      aRequestId,
-                                      aOption);
+                                      options);
   return NS_OK;
 }
 

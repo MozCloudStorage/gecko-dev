@@ -6,10 +6,10 @@
 
 DIRS += [
     'interfaces',
-    'fuse',
 ]
 
 EXPORTS.mozilla.dom += [
+#    'FakeVirtualFileSystemService.h',
     'FileSystemProvider.h',
     'FileSystemProviderAbortEvent.h',
     'FileSystemProviderCloseFileEvent.h',
@@ -19,9 +19,11 @@ EXPORTS.mozilla.dom += [
     'FileSystemProviderReadDirectoryEvent.h',
     'FileSystemProviderReadFileEvent.h',
     'FileSystemProviderUnmountEvent.h',
+    'VirtualFileSystemServiceFactory.h',
 ]
 
 UNIFIED_SOURCES += [
+#    'FakeVirtualFileSystemService.cpp',
     'FileSystemProvider.cpp',
     'FileSystemProviderAbortEvent.cpp',
     'FileSystemProviderCloseFileEvent.cpp',
@@ -31,18 +33,27 @@ UNIFIED_SOURCES += [
     'FileSystemProviderReadDirectoryEvent.cpp',
     'FileSystemProviderReadFileEvent.cpp',
     'FileSystemProviderUnmountEvent.cpp',
-    'nsVirtualFileSystem.cpp',
     'nsVirtualFileSystemCallback.cpp',
-    'nsVirtualFileSystemData.cpp',
+    'nsVirtualFileSystemDataType.cpp',
     'nsVirtualFileSystemRequestManager.cpp',
     'nsVirtualFileSystemRequestValue.cpp',
-    'nsVirtualFileSystemService.cpp',
     'VirtualFileSystemModule.cpp',
+    'VirtualFileSystemServiceFactory.cpp',
 ]
 
-LOCAL_INCLUDES += [
-    '/dom/virtualfilesystem/fuse',
-]
+if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gonk':
+    DIRS += [
+        'fuse',
+    ]
+
+    LOCAL_INCLUDES += [
+        '/dom/virtualfilesystem/fuse',
+    ]
+
+    UNIFIED_SOURCES += [
+        'nsVirtualFileSystem.cpp',
+        'nsVirtualFileSystemService.cpp',
+    ]
 
 include('/ipc/chromium/chromium-config.mozbuild')
 

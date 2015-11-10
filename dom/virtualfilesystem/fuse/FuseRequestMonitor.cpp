@@ -392,6 +392,10 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleRelease()
 }
 
 void
+FuseRequestMonitor::FuseMonitorRunnable::HandleReleaseDir()
+{
+}
+void
 FuseRequestMonitor::FuseMonitorRunnable::HandleOpenDir()
 {
   MOZ_ASSERT(!NS_IsMainThread());

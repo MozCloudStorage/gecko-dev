@@ -5,7 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderCloseFileEvent.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -25,12 +24,12 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(CloseFileRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(CloseFileRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemCloseFileRequestOption)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemCloseFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 JSObject*
 CloseFileRequestedOptions::WrapObject(JSContext* aCx,
-                                  JS::Handle<JSObject*> aGivenProto)
+                                      JS::Handle<JSObject*> aGivenProto)
 {
   return CloseFileRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
@@ -76,18 +75,16 @@ FileSystemProviderCloseFileEvent::Options() const
 
 nsresult
 FileSystemProviderCloseFileEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemCloseFileRequestOption> option = do_QueryInterface(aOption);
-  if (!option) {
+  nsCOMPtr<nsIVirtualFileSystemCloseFileRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
     MOZ_ASSERT(false);
     return NS_ERROR_INVALID_ARG;
   }
 
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("closefilerequested"),
-                                      aRequestId,
-                                      option);
+                                      options);
   return NS_OK;
 }
 

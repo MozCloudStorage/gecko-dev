@@ -16,6 +16,24 @@
 namespace mozilla {
 namespace dom {
 
+class UnmountRequestedOptions final : public FileSystemProviderRequestedOptions
+                                    , public nsIVirtualFileSystemUnmountRequestedOptions
+{
+public:
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(UnmountRequestedOptions,
+                                           FileSystemProviderRequestedOptions)
+  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
+  NS_DECL_NSIVIRTUALFILESYSTEMUNMOUNTREQUESTEDOPTIONS
+
+  explicit UnmountRequestedOptions() = default;
+
+  virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
+
+private:
+  ~UnmountRequestedOptions() = default;
+};
+
 class FileSystemProviderUnmountEvent final : public FileSystemProviderEvent
 {
 public:
@@ -25,10 +43,10 @@ public:
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
 
-  FileSystemProviderRequestedOptions* Options() const;
+  UnmountRequestedOptions* Options() const;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) override;
+  virtual nsresult InitFileSystemProviderEvent(
+	nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

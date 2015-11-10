@@ -2,22 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "domstubs.idl"
+#include "nsISupports.idl"
 
 interface nsIArray;
+interface nsIEntryMetadata;
 
 %{C++
-#define VIRTUALFILESYSTEMABORTCALLBACK_CID \
-  { 0x86c25578, 0x0470, 0x48be, \
-    { 0x86, 0x17, 0x06, 0x23, 0x2c, 0x8f, 0x4d, 0xee }}
-#define ENTRYMETADATA_CID \
-  { 0xd94c977c, 0xfac1, 0x42c2, \
-    { 0xa5, 0x5e, 0xc1, 0x66, 0x6e, 0xe0, 0x68, 0x8b }}
-
-#define VIRTUAL_FILE_SYSTEM_CALLBACK_CONTRACT_ID \
-  "@mozilla.org/virtualfilesystem/virtualfilesystem-callback;1"
-#define ENTRY_METADATA_CONTRACT_ID \
-  "@mozilla.org/virtualfilesystem/entry-metadata;1"
 
 namespace mozilla {
 namespace dom {
@@ -27,30 +17,8 @@ const char* NS_RequestErrorStr(uint32_t aType);
 }
 }
 }
+
 %}
-
-/**
- * XPCOM component which represents the metadata of a file or a directory.
- * This is the same as EntryMetadata defined in FileSystemProviderGetMetadataEvent.webidl.
- */
-[scriptable, uuid(f6c620a2-e1b4-410f-b286-cc04eedf6a63)]
-interface nsIEntryMetadata : nsISupports
-{
-  // The data is a directory or not.
-  attribute boolean isDirectory;
-
-  // Base name of the data.
-  attribute DOMString name;
-
-  // Size of the data.
-  attribute unsigned long long size;
-
-  // Modification time of the data.
-  attribute DOMTimeStamp modificationTime;
-
-  // Optional string for MIME type, might be empty.
-  attribute DOMString mimeType;
-};
 
 /**
  * XPCOM component which acts as a container for data returned from

@@ -15,17 +15,17 @@
 #include "mozilla/dom/Promise.h"
 #include "mozilla/unused.h"
 
+#include "VirtualFileSystemServiceFactory.h"
 #include "FileSystemProvider.h"
-#include "nsVirtualFileSystemData.h"
+#include "nsArrayUtils.h"
+#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestManager.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemService.h"
 
 namespace mozilla {
 namespace dom {
 
-using virtualfilesystem::nsVirtualFileSystemMountOptions;
-using virtualfilesystem::nsVirtualFileSystemUnmountOptions;
+using virtualfilesystem::nsVirtualFileSystemMountRequestedOptions;
 
 static uint32_t sRequestId = 0;
 
@@ -55,7 +55,8 @@ FileSystemProvider::~FileSystemProvider()
 bool
 FileSystemProvider::Init()
 {
-  mVirtualFileSystemService = do_GetService(VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID);
+  mVirtualFileSystemService =
+    VirtualFileSystemServiceFactory::AutoCreateVirtualFileSystemService();
   if (!mVirtualFileSystemService) {
     return false;
   }
@@ -88,21 +89,21 @@ FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
     return nullptr;
   }
 
-  nsCOMPtr<nsIVirtualFileSystemMountOptions> mountOption =
-    new nsVirtualFileSystemMountOptions();
-  mountOption->SetFileSystemId(aOptions.mFileSystemId);
-  mountOption->SetDisplayName(aOptions.mDisplayName);
+  nsCOMPtr<nsIVirtualFileSystemMountRequestedOptions> mountOptions =
+    new nsVirtualFileSystemMountRequestedOptions();
+  mountOptions->SetFileSystemId(aOptions.mFileSystemId);
+  mountOptions->SetDisplayName(aOptions.mDisplayName);
   if (aOptions.mWritable.WasPassed() && !aOptions.mWritable.Value().IsNull()) {
-    mountOption->SetWritable(aOptions.mWritable.Value().Value());
+    mountOptions->SetWritable(aOptions.mWritable.Value().Value());
   }
   if (aOptions.mOpenedFilesLimit.WasPassed() &&
       !aOptions.mOpenedFilesLimit.Value().IsNull()) {
-    mountOption->SetOpenedFilesLimit(aOptions.mOpenedFilesLimit.Value().Value());
+    mountOptions->SetOpenedFilesLimit(aOptions.mOpenedFilesLimit.Value().Value());
   }
-  mountOption->SetRequestId(++sRequestId);
+  mountOptions->SetRequestId(++sRequestId);
 
   mPendingRequestPromises[sRequestId] = promise;
-  mVirtualFileSystemService->Mount(mountOption, mRequestManager, this);
+  mVirtualFileSystemService->Mount(mountOptions, mRequestManager, this);
 
   return promise.forget();
 }
@@ -118,27 +119,72 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
     return nullptr;
   }
 
-  nsCOMPtr<nsIVirtualFileSystemUnmountOptions> unmountOption =
-    new nsVirtualFileSystemUnmountOptions();
-  unmountOption->SetFileSystemId(aOptions.mFileSystemId);
-  unmountOption->SetRequestId(++sRequestId);
+  nsCOMPtr<nsIVirtualFileSystemUnmountRequestedOptions> unmountOptions =
+    new UnmountRequestedOptions();
+  unmountOptions->SetFileSystemId(aOptions.mFileSystemId);
+  unmountOptions->SetRequestId(++sRequestId);
 
   mPendingRequestPromises[sRequestId] = promise;
-  mVirtualFileSystemService->Unmount(unmountOption, this);
+  mVirtualFileSystemService->Unmount(unmountOptions, this);
 
   return promise.forget();
 }
 
-already_AddRefed<Promise>
-FileSystemProvider::Get(const nsAString& fileSystemId, ErrorResult& aRv)
+void
+FileSystemProvider::Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, ErrorResult& aRv)
 {
-  return nullptr;
+  nsCOMPtr<nsIVirtualFileSystemInfo> info;
+  nsresult rv = mVirtualFileSystemService->GetVirtualFileSystemById(aFileSystemId,
+                                                                    getter_AddRefs(info));
+  if (NS_FAILED(rv)) {
+     aRv.Throw(rv);
+     return;
+   }
+
+   nsString fileSystemId;
+   info->GetFileSystemId(fileSystemId);
+   nsString displayName;
+   info->GetDisplayName(displayName);
+   bool writable;
+   info->GetWritable(&writable);
+   uint32_t openedFilesLimit;
+   info->GetOpenedFilesLimit(&openedFilesLimit);
+   nsCOMPtr<nsIArray> opendFiles;
+   info->GetOpenedFiles(getter_AddRefs(opendFiles));
+
+   aInfo.mFileSystemId.Construct(fileSystemId);
+   aInfo.mDisplayName.Construct(displayName);
+   aInfo.mWritable.Construct(writable);
+   aInfo.mOpenedFilesLimit.Construct(openedFilesLimit);
+   if (opendFiles) {
+     Sequence<OpenedFile> openedFileSequence;
+     uint32_t len = 0;
+     opendFiles->GetLength(&len);
+     for (uint32_t i = 0; i < len; i++) {
+       nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo = do_QueryElementAt(opendFiles, i);
+       if (fileInfo) {
+         nsString filePath;
+         fileInfo->GetFilePath(filePath);
+         uint32_t mode;
+         fileInfo->GetMode(&mode);
+         uint32_t openRequestId;
+         fileInfo->GetOpenRequestId(&openRequestId);
+
+         OpenedFile file;
+         file.mFilePath.Construct(filePath);
+         file.mMode.Construct(static_cast<OpenFileMode>(mode));
+         file.mOpenRequestId.Construct(openRequestId);
+         openedFileSequence.AppendElement(file,  fallible);
+       }
+     }
+     aInfo.mOpenedFiles.Construct(openedFileSequence);
+   }
 }
 
 NS_IMETHODIMP
 FileSystemProvider::DispatchFileSystemProviderEvent(uint32_t aRequestId,
                                                     uint32_t aRequestType,
-                                                    nsIVirtualFileSystemRequestOption* aOption)
+                                                    nsIVirtualFileSystemRequestedOptions* aOption)
 {
   if (NS_WARN_IF(!aOption)) {
     return NS_ERROR_INVALID_ARG;
@@ -172,7 +218,7 @@ FileSystemProvider::DispatchFileSystemProviderEvent(uint32_t aRequestId,
       return NS_ERROR_INVALID_ARG;
   }
 
-  event->InitFileSystemProviderEvent(aRequestId, aOption);
+  event->InitFileSystemProviderEvent(aOption);
   return DispatchTrustedEvent(event);;
 }
 
@@ -181,8 +227,8 @@ FileSystemProvider::OnSuccess(uint32_t aRequestId,
                               nsIVirtualFileSystemRequestValue* aValue,
                               bool aHasMore)
 {
-  //unused << aValue;
-  //unused << aHasMore;
+  Unused << aValue;
+  Unused << aHasMore;
 
   auto it = mPendingRequestPromises.find(aRequestId);
   if (NS_WARN_IF(it == mPendingRequestPromises.end())) {
@@ -197,6 +243,8 @@ FileSystemProvider::OnSuccess(uint32_t aRequestId,
 NS_IMETHODIMP
 FileSystemProvider::OnError(uint32_t aRequestId, uint32_t aErrorCode)
 {
+  Unused << aErrorCode;
+
   auto it = mPendingRequestPromises.find(aRequestId);
   if (NS_WARN_IF(it == mPendingRequestPromises.end())) {
     return NS_ERROR_INVALID_ARG;

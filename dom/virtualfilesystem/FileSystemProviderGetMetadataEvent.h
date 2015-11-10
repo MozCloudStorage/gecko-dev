@@ -13,20 +13,18 @@
 #include "mozilla/dom/FileSystemProviderGetMetadataEventBinding.h"
 #include "nsWrapperCache.h"
 
-class nsIVirtualFileSystemGetMetadataRequestOption;
-
 namespace mozilla {
 namespace dom {
 
 class GetMetadataRequestedOptions final : public FileSystemProviderRequestedOptions
-                                        , public nsIVirtualFileSystemGetMetadataRequestOption
+                                        , public nsIVirtualFileSystemGetMetadataRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(GetMetadataRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTOPTION(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMGETMETADATAREQUESTOPTION
+  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
+  NS_DECL_NSIVIRTUALFILESYSTEMGETMETADATAREQUESTEDOPTIONS
 
   explicit GetMetadataRequestedOptions() = default;
 
@@ -54,8 +52,8 @@ public:
 
   GetMetadataRequestedOptions* Options() const;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) override;
+  virtual nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback(const EntryMetadata& aData);
 

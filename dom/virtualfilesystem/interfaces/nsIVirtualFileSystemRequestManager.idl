@@ -5,7 +5,7 @@
 #include "nsISupports.idl"
 
 interface nsIVirtualFileSystemCallback;
-interface nsIVirtualFileSystemRequestOption;
+interface nsIVirtualFileSystemRequestedOptions;
 interface nsIVirtualFileSystemRequestValue;
 interface nsIFileSystemProviderEventDispatcher;
 
@@ -34,11 +34,11 @@ interface nsIVirtualFileSystemRequestManager : nsISupports
    * case of an error.
    *
    * @param requestType   The type of the request.
-   * @param option        The information for the request to be created.
+   * @param options       The information for the request to be created.
    * @param callback      The callback to be called for passing the result.
    */
   unsigned long createRequest(in unsigned long requestType,
-                              in nsIVirtualFileSystemRequestOption option,
+                              in nsIVirtualFileSystemRequestedOptions options,
                               in nsIVirtualFileSystemCallback callback);
   /**
    * Handles successful response for the request. It may be called more than once,

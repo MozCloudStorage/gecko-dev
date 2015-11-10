@@ -38,6 +38,8 @@ public:
 
   already_AddRefed<nsIVirtualFileSystem>
          FindVirtualFileSystemById(const nsAString& aName);
+
+  static nsString CreateMountPoint(const nsAString& aFileSystemId);
 private:
   ~nsVirtualFileSystemService();
 

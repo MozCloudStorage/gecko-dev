@@ -14,20 +14,18 @@
 #include "mozilla/dom/TypedArray.h"
 #include "nsWrapperCache.h"
 
-class nsIVirtualFileSystemReadFileRequestOption;
-
 namespace mozilla {
 namespace dom {
 
 class ReadFileRequestedOptions final : public FileSystemProviderRequestedOptions
-                                     , public nsIVirtualFileSystemReadFileRequestOption
+                                     , public nsIVirtualFileSystemReadFileRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ReadFileRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTOPTION(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMREADFILEREQUESTOPTION
+  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
+  NS_DECL_NSIVIRTUALFILESYSTEMREADFILEREQUESTEDOPTIONS
 
   explicit ReadFileRequestedOptions() = default;
 
@@ -67,8 +65,8 @@ public:
 
   ReadFileRequestedOptions* Options() const;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) override;
+  virtual nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback(const ArrayBuffer& aData, bool aHasMore);
 

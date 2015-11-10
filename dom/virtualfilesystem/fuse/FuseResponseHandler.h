@@ -11,6 +11,7 @@
 #include "FuseHandler.h"
 #include "nsIVirtualFileSystemResponseHandler.h"
 #include "nsIVirtualFileSystemCallback.h"
+#include "nsIVirtualFileSystemDataType.h"
 
 #include "fuse.h"
 

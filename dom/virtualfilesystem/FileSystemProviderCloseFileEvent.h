@@ -13,20 +13,18 @@
 #include "mozilla/dom/FileSystemProviderCloseFileEventBinding.h"
 #include "nsWrapperCache.h"
 
-class nsIVirtualFileSystemCloseFileRequestOption;
-
 namespace mozilla {
 namespace dom {
 
 class CloseFileRequestedOptions final : public FileSystemProviderRequestedOptions
-                                      , public nsIVirtualFileSystemCloseFileRequestOption
+                                      , public nsIVirtualFileSystemCloseFileRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(CloseFileRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTOPTION(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMCLOSEFILEREQUESTOPTION
+  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
+  NS_DECL_NSIVIRTUALFILESYSTEMCLOSEFILEREQUESTEDOPTIONS
 
   explicit CloseFileRequestedOptions() = default;
 
@@ -54,8 +52,8 @@ public:
 
   CloseFileRequestedOptions* Options() const;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) override;
+  virtual nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

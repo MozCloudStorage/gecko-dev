@@ -5,7 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderAbortEvent.h"
-#include "nsIVirtualFileSystemRequestOption.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -25,7 +24,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(AbortRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(AbortRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemAbortRequestOption)
+NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemAbortRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 JSObject*
@@ -75,18 +74,15 @@ FileSystemProviderAbortEvent::Options() const
 
 nsresult
 FileSystemProviderAbortEvent::InitFileSystemProviderEvent(
-  uint32_t aRequestId,
-  nsIVirtualFileSystemRequestOption* aOption)
+  nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemAbortRequestOption> option = do_QueryInterface(aOption);
-  if (!option) {
+  nsCOMPtr<nsIVirtualFileSystemAbortRequestedOptions> options = do_QueryInterface(aOptions);
+  if (!options) {
     MOZ_ASSERT(false);
     return NS_ERROR_INVALID_ARG;
   }
 
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("abortrequested"),
-                                      aRequestId,
-                                      option);
+  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("abortrequested"), options);
   return NS_OK;
 }
 

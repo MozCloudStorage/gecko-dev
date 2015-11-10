@@ -33,12 +33,12 @@ private:
 
     explicit nsVirtualFileSystemRequest(uint32_t aRequestType,
                                    uint32_t aRequestId,
-                                   nsIVirtualFileSystemRequestOption* aOption,
+                                   nsIVirtualFileSystemRequestedOptions* aOption,
                                    nsIVirtualFileSystemCallback* aCallback);
 
     uint32_t mRequestType;
     uint32_t mRequestId;
-    nsCOMPtr<nsIVirtualFileSystemRequestOption> mOption;
+    nsCOMPtr<nsIVirtualFileSystemRequestedOptions> mOption;
     nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
     bool mIsCompleted;
     nsCOMPtr<nsIVirtualFileSystemRequestValue> mValue;

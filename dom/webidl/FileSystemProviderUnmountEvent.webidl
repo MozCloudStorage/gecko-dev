@@ -7,10 +7,15 @@
  * https://developer.chrome.com/apps/fileSystemProvider
  */
 
+// Options for FileSystemProviderUnmountEvent.
+[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+interface UnmountRequestedOptions : FileSystemProviderRequestedOptions {
+};
+
 // Raised when unmounting for the file system with the
 // fileSystemId identifier is requested.
 [Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderUnmountEvent : FileSystemProviderEvent {
-  readonly attribute FileSystemProviderRequestedOptions options;
+  readonly attribute UnmountRequestedOptions options;
   void successCallback();
 };

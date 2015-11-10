@@ -7,7 +7,7 @@
 #ifndef mozilla_dom_FileSystemProviderEvent_h
 #define mozilla_dom_FileSystemProviderEvent_h
 
-#include "nsIVirtualFileSystemRequestOption.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/ErrorResult.h"
 #include "mozilla/dom/BindingUtils.h"
@@ -15,19 +15,18 @@
 #include "mozilla/dom/FileSystemProviderEventBinding.h"
 
 class nsIVirtualFileSystemRequestManager;
-class nsIVirtualFileSystemRequestOption;
 class nsIVirtualFileSystemRequestValue;
 
 namespace mozilla {
 namespace dom {
 
-class FileSystemProviderRequestedOptions : public nsIVirtualFileSystemRequestOption
+class FileSystemProviderRequestedOptions : public nsIVirtualFileSystemRequestedOptions
                                          , public nsWrapperCache
 {
 public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(FileSystemProviderRequestedOptions)
-  NS_DECL_NSIVIRTUALFILESYSTEMREQUESTOPTION
+  NS_DECL_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS
 
   explicit FileSystemProviderRequestedOptions() = default;
 
@@ -46,11 +45,6 @@ public:
   uint32_t RequestId() const
   {
     return mRequestId;
-  }
-
-  void SetRequestId(uint32_t aRequestId)
-  {
-    mRequestId = aRequestId;
   }
 
 protected:
@@ -74,8 +68,8 @@ public:
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
 
-  virtual nsresult InitFileSystemProviderEvent(uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestOption* aOption) = 0;
+  virtual nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOption) = 0;
 
   virtual void OnSuccess(nsIVirtualFileSystemRequestValue* aValue, bool aHasMore);
   void ErrorCallback(const FileSystemProviderError& aError);
@@ -83,8 +77,7 @@ public:
 protected:
   virtual ~FileSystemProviderEvent();
   void InitFileSystemProviderEventInternal(const nsAString& aType,
-                                           uint32_t aRequestId,
-                                           nsIVirtualFileSystemRequestOption* aOption);
+                                           nsIVirtualFileSystemRequestedOptions* aOptions);
 
   nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
   RefPtr<FileSystemProviderRequestedOptions> mOptions;

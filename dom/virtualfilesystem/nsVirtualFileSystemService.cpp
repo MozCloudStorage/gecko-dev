@@ -3,17 +3,22 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsVirtualFileSystemService.h"
-#include "VirtualFileSystemLog.h"
 #include "nsVirtualFileSystem.h"
+#include "nsVirtualFileSystemDataType.h"
 #include "nsIMutableArray.h"
 #include "nsISupportsPrimitives.h"
 #include "nsISupportsUtils.h"
 #include "nsServiceManagerUtils.h"
 #include "mozilla/Services.h"
-#include "FuseHandler.h"
-#include "FuseMounter.h"
-#include "FuseRequestMonitor.h"
-#include "FuseResponseHandler.h"
+#include "FuseManager.h"
+#ifdef VIRTUAL_FILE_SYSTEM_LOG_TAG
+#undef VIRTUAL_FILE_SYSTEM_LOG_TAG
+#endif
+#define VIRTUAL_FILE_SYSTEM_LOG_TAG "VirtualFileSystemService"
+
+#include "VirtualFileSystemLog.h"
+
+#define MOUNTROOT "/data/vfs"
 
 namespace mozilla {
 namespace dom {
@@ -49,15 +54,19 @@ nsVirtualFileSystemService::GetSingleton()
 // nsIVirtualFileSystemService interface implementation
 
 NS_IMETHODIMP
-nsVirtualFileSystemService::Mount(nsIVirtualFileSystemMountOptions* aOption,
-                             nsIVirtualFileSystemRequestManager* aRequestMgr,
-                             nsIVirtualFileSystemCallback* aCallback)
+nsVirtualFileSystemService::Mount(nsIVirtualFileSystemMountRequestedOptions* aOption,
+                                  nsIVirtualFileSystemRequestManager* aRequestMgr,
+                                  nsIVirtualFileSystemCallback* aCallback)
 {
   nsString fileSystemId;
   nsString displayName;
+  bool     writable;
+  uint32_t openedLimit;
   uint32_t requestId;
   aOption->GetFileSystemId(fileSystemId);
   aOption->GetDisplayName(displayName);
+  aOption->GetWritable(&writable);
+  aOption->GetOpenedFilesLimit(&openedLimit);
   aOption->GetRequestId(&requestId);
 
   if (fileSystemId.IsEmpty()) {
@@ -80,24 +89,26 @@ nsVirtualFileSystemService::Mount(nsIVirtualFileSystemMountOptions* aOption,
     return NS_ERROR_FAILURE;
   }
 
-  RefPtr<nsVirtualFileSystem> rawstorage = new nsVirtualFileSystem(aOption);
-  vfs = rawstorage;
+  nsString mountPoint = nsVirtualFileSystemService::CreateMountPoint(fileSystemId);
 
-  nsString mountPoint = nsVirtualFileSystem::CreateMountPoint(fileSystemId);
+  RefPtr<nsIVirtualFileSystemInfo> info = new nsVirtualFileSystemInfo();
+  info->SetFileSystemId(fileSystemId);
+  info->SetDisplayName(displayName);
+  info->SetWritable(writable);
+  info->SetOpenedFilesLimit(openedLimit);
 
-  RefPtr<FuseHandler> fh =
-                      new FuseHandler(fileSystemId, mountPoint, displayName);
-  sFuseHandlerTable.Put(fileSystemId, fh);
+  RefPtr<nsVirtualFileSystem> rawstorage = new nsVirtualFileSystem();
+  rawstorage->SetInfo(info);
+  rawstorage->SetRequestManager(aRequestMgr);
 
-  RefPtr<FuseMounter> mounter = new FuseMounter(fh);
-  mounter->Mount(aCallback, requestId);
+  SetupFuseDevice(rawstorage,
+                  mountPoint,
+                  fileSystemId,
+                  displayName,
+                  requestId,
+                  aCallback);
 
-  RefPtr<nsIVirtualFileSystemResponseHandler> responsehandler =
-                                         new FuseResponseHandler(fh);
-  rawstorage->SetResponseHandler(responsehandler);
-
-  RefPtr<FuseRequestMonitor> monitor = new FuseRequestMonitor(fh);
-  monitor->Monitor(vfs);
+  vfs = rawstorage.forget();
 
   MonitorAutoLock lock(mArrayMonitor);
   mVirtualFileSystemArray.AppendElement(vfs);
@@ -106,8 +117,8 @@ nsVirtualFileSystemService::Mount(nsIVirtualFileSystemMountOptions* aOption,
 }
 
 NS_IMETHODIMP
-nsVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountOptions* aOption,
-                               nsIVirtualFileSystemCallback* aCallback)
+nsVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountRequestedOptions* aOption,
+                                    nsIVirtualFileSystemCallback* aCallback)
 {
   nsString fileSystemId;
   uint32_t requestId;
@@ -128,19 +139,7 @@ nsVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountOptions* aOption,
     return NS_ERROR_FAILURE;
   }
 
-  RefPtr<FuseHandler> fh;
-  if(!sFuseHandlerTable.Remove(fileSystemId,getter_AddRefs(fh))) {
-    ERR("The corresponding FUSE device '%s' does not exist.",
-         NS_ConvertUTF16toUTF8(fileSystemId).get());
-    aCallback->OnError(requestId, nsIVirtualFileSystemCallback::ERROR_FAILED);
-    return NS_ERROR_FAILURE;
-  }
-
-  RefPtr<FuseRequestMonitor> monitor = new FuseRequestMonitor(fh);
-  monitor->Stop();
-
-  RefPtr<FuseMounter> mounter = new FuseMounter(fh);
-  mounter->Unmount(aCallback, requestId);
+  ShotdownFuseDevice(fileSystemId, requestId, aCallback);
 
   MonitorAutoLock lock(mArrayMonitor);
   mVirtualFileSystemArray.RemoveElement(vfs);
@@ -149,7 +148,7 @@ nsVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountOptions* aOption,
 
 NS_IMETHODIMP
 nsVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSystemId,
-                                           nsIVirtualFileSystemInfo** aInfo)
+                                                     nsIVirtualFileSystemInfo** aInfo)
 {
   MonitorAutoLock lock(mArrayMonitor);
   RefPtr<nsIVirtualFileSystem> vfs = FindVirtualFileSystemById(aFileSystemId);
@@ -197,6 +196,12 @@ nsVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aCloudNames)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsVirtualFileSystemService::GetRequestManagerById(const nsAString& aFileSystemId,
+                                                  nsIVirtualFileSystemRequestManager** aMgr)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
 /////////////////////////////////////////////////////////////////
 already_AddRefed<nsIVirtualFileSystem>
 nsVirtualFileSystemService::FindVirtualFileSystemById(const nsAString& aFileSystemId)
@@ -224,6 +229,15 @@ nsVirtualFileSystemService::FindVirtualFileSystemById(const nsAString& aFileSyst
     }
   }
   return nullptr;
+}
+
+nsString
+nsVirtualFileSystemService::CreateMountPoint(const nsAString& aFileSystemId)
+{
+  nsString mountPoint = NS_LITERAL_STRING(MOUNTROOT);
+  mountPoint.Append(NS_LITERAL_STRING("/"));
+  mountPoint.Append(aFileSystemId);
+  return mountPoint;
 }
 
 } // end namespace virtualfilesystem
