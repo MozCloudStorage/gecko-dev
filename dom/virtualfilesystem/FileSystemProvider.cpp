@@ -26,6 +26,7 @@ namespace mozilla {
 namespace dom {
 
 using virtualfilesystem::nsVirtualFileSystemMountRequestedOptions;
+using virtualfilesystem::nsVirtualFileSystemUnmountRequestedOptions;
 
 static uint32_t sRequestId = 0;
 
@@ -120,7 +121,7 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
   }
 
   nsCOMPtr<nsIVirtualFileSystemUnmountRequestedOptions> unmountOptions =
-    new UnmountRequestedOptions();
+    new nsVirtualFileSystemUnmountRequestedOptions();
   unmountOptions->SetFileSystemId(aOptions.mFileSystemId);
   unmountOptions->SetRequestId(++sRequestId);
 
@@ -137,56 +138,56 @@ FileSystemProvider::Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, E
   nsresult rv = mVirtualFileSystemService->GetVirtualFileSystemById(aFileSystemId,
                                                                     getter_AddRefs(info));
   if (NS_FAILED(rv)) {
-     aRv.Throw(rv);
-     return;
-   }
+    aRv.Throw(rv);
+    return;
+  }
 
-   nsString fileSystemId;
-   info->GetFileSystemId(fileSystemId);
-   nsString displayName;
-   info->GetDisplayName(displayName);
-   bool writable;
-   info->GetWritable(&writable);
-   uint32_t openedFilesLimit;
-   info->GetOpenedFilesLimit(&openedFilesLimit);
-   nsCOMPtr<nsIArray> opendFiles;
-   info->GetOpenedFiles(getter_AddRefs(opendFiles));
+  nsString fileSystemId;
+  info->GetFileSystemId(fileSystemId);
+  nsString displayName;
+  info->GetDisplayName(displayName);
+  bool writable;
+  info->GetWritable(&writable);
+  uint32_t openedFilesLimit;
+  info->GetOpenedFilesLimit(&openedFilesLimit);
+  nsCOMPtr<nsIArray> opendFiles;
+  info->GetOpenedFiles(getter_AddRefs(opendFiles));
 
-   aInfo.mFileSystemId.Construct(fileSystemId);
-   aInfo.mDisplayName.Construct(displayName);
-   aInfo.mWritable.Construct(writable);
-   aInfo.mOpenedFilesLimit.Construct(openedFilesLimit);
-   if (opendFiles) {
-     Sequence<OpenedFile> openedFileSequence;
-     uint32_t len = 0;
-     opendFiles->GetLength(&len);
-     for (uint32_t i = 0; i < len; i++) {
-       nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo = do_QueryElementAt(opendFiles, i);
-       if (fileInfo) {
-         nsString filePath;
-         fileInfo->GetFilePath(filePath);
-         uint32_t mode;
-         fileInfo->GetMode(&mode);
-         uint32_t openRequestId;
-         fileInfo->GetOpenRequestId(&openRequestId);
+  aInfo.mFileSystemId.Construct(fileSystemId);
+  aInfo.mDisplayName.Construct(displayName);
+  aInfo.mWritable.Construct(writable);
+  aInfo.mOpenedFilesLimit.Construct(openedFilesLimit);
+  if (opendFiles) {
+    Sequence<OpenedFile> openedFileSequence;
+    uint32_t len = 0;
+    opendFiles->GetLength(&len);
+    for (uint32_t i = 0; i < len; i++) {
+      nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo = do_QueryElementAt(opendFiles, i);
+      if (fileInfo) {
+        nsString filePath;
+        fileInfo->GetFilePath(filePath);
+        uint32_t mode;
+        fileInfo->GetMode(&mode);
+        uint32_t openRequestId;
+        fileInfo->GetOpenRequestId(&openRequestId);
 
-         OpenedFile file;
-         file.mFilePath.Construct(filePath);
-         file.mMode.Construct(static_cast<OpenFileMode>(mode));
-         file.mOpenRequestId.Construct(openRequestId);
-         openedFileSequence.AppendElement(file,  fallible);
-       }
-     }
-     aInfo.mOpenedFiles.Construct(openedFileSequence);
-   }
+        OpenedFile file;
+        file.mFilePath.Construct(filePath);
+        file.mMode.Construct(static_cast<OpenFileMode>(mode));
+        file.mOpenRequestId.Construct(openRequestId);
+        openedFileSequence.AppendElement(file,  fallible);
+      }
+    }
+  aInfo.mOpenedFiles.Construct(openedFileSequence);
+  }
 }
 
 NS_IMETHODIMP
 FileSystemProvider::DispatchFileSystemProviderEvent(uint32_t aRequestId,
                                                     uint32_t aRequestType,
-                                                    nsIVirtualFileSystemRequestedOptions* aOption)
+                                                    nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  if (NS_WARN_IF(!aOption)) {
+  if (NS_WARN_IF(!aOptions)) {
     return NS_ERROR_INVALID_ARG;
   }
 
@@ -218,8 +219,8 @@ FileSystemProvider::DispatchFileSystemProviderEvent(uint32_t aRequestId,
       return NS_ERROR_INVALID_ARG;
   }
 
-  event->InitFileSystemProviderEvent(aOption);
-  return DispatchTrustedEvent(event);;
+  event->InitFileSystemProviderEvent(aOptions);
+  return DispatchTrustedEvent(event);
 }
 
 NS_IMETHODIMP

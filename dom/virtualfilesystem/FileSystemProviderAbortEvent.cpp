@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderAbortEvent.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -24,8 +25,21 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(AbortRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(AbortRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemAbortRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+AbortRequestedOptions::AbortRequestedOptions(nsISupports* aParent,
+                                             nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+  nsCOMPtr<nsIVirtualFileSystemAbortRequestedOptions> options =
+    do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    return;
+  }
+
+  options->GetOperationRequestId(&mOperationRequestId);
+}
 
 JSObject*
 AbortRequestedOptions::WrapObject(JSContext* aCx,
@@ -34,20 +48,10 @@ AbortRequestedOptions::WrapObject(JSContext* aCx,
   return AbortRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-AbortRequestedOptions::GetOperationRequestId(uint32_t *aOperationRequestId)
+uint32_t
+AbortRequestedOptions::OperationRequestId() const
 {
-  NS_ENSURE_ARG_POINTER(aOperationRequestId);
-
-  *aOperationRequestId = mOperationRequestId;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-AbortRequestedOptions::SetOperationRequestId(uint32_t aOperationRequestId)
-{
-  mOperationRequestId = aOperationRequestId;
-  return NS_OK;
+  return mOperationRequestId;
 }
 
 FileSystemProviderAbortEvent::FileSystemProviderAbortEvent(EventTarget* aOwner,
@@ -76,12 +80,7 @@ nsresult
 FileSystemProviderAbortEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemAbortRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<AbortRequestedOptions> options = new AbortRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("abortrequested"), options);
   return NS_OK;
 }

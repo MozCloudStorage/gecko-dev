@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderOpenFileEvent.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -24,8 +25,25 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(OpenFileRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(OpenFileRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemOpenFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+OpenFileRequestedOptions::OpenFileRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+  nsCOMPtr<nsIVirtualFileSystemOpenFileRequestedOptions> options =
+    do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    return;
+  }
+
+  options->GetFilePath(mFilePath);
+  uint32_t mode;
+  options->GetMode(&mode);
+  mMode = static_cast<OpenFileMode>(mode);
+}
 
 JSObject*
 OpenFileRequestedOptions::WrapObject(JSContext* aCx,
@@ -34,36 +52,16 @@ OpenFileRequestedOptions::WrapObject(JSContext* aCx,
   return OpenFileRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-OpenFileRequestedOptions::GetFilePath(nsAString& aFilePath)
+void
+OpenFileRequestedOptions::GetFilePath(nsAString& aPath) const
 {
-  aFilePath = mFilePath;
-  return NS_OK;
+  aPath = mFilePath;
 }
 
-NS_IMETHODIMP
-OpenFileRequestedOptions::SetFilePath(const nsAString & aFilePath)
+OpenFileMode
+OpenFileRequestedOptions::Mode() const
 {
-  mFilePath = aFilePath;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-OpenFileRequestedOptions::GetMode(uint32_t* aMode)
-{
-  if (NS_WARN_IF(!aMode)) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  *aMode = static_cast<uint32_t>(mMode);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-OpenFileRequestedOptions::SetMode(uint32_t aMode)
-{
-  mMode = static_cast<OpenFileMode>(aMode);
-  return NS_OK;
+  return mMode;
 }
 
 FileSystemProviderOpenFileEvent::FileSystemProviderOpenFileEvent(
@@ -93,12 +91,7 @@ nsresult
 FileSystemProviderOpenFileEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemOpenFileRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<OpenFileRequestedOptions> options = new OpenFileRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("openfilerequested"),
                                       options);
   return NS_OK;

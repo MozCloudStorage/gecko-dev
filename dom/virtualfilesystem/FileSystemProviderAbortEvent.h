@@ -17,23 +17,18 @@ namespace mozilla {
 namespace dom {
 
 class AbortRequestedOptions final : public FileSystemProviderRequestedOptions
-                                  , public nsIVirtualFileSystemAbortRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(AbortRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMABORTREQUESTEDOPTIONS
 
-  explicit AbortRequestedOptions() = default;
+  explicit AbortRequestedOptions(nsISupports* aParent,
+                                 nsIVirtualFileSystemRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  uint32_t OperationRequestId() const
-  {
-    return mOperationRequestId;
-  }
+  uint32_t OperationRequestId() const;
 
 private:
   virtual ~AbortRequestedOptions() = default;

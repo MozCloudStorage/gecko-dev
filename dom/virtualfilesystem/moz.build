@@ -9,7 +9,7 @@ DIRS += [
 ]
 
 EXPORTS.mozilla.dom += [
-#    'FakeVirtualFileSystemService.h',
+    'FakeVirtualFileSystemService.h',
     'FileSystemProvider.h',
     'FileSystemProviderAbortEvent.h',
     'FileSystemProviderCloseFileEvent.h',
@@ -23,7 +23,7 @@ EXPORTS.mozilla.dom += [
 ]
 
 UNIFIED_SOURCES += [
-#    'FakeVirtualFileSystemService.cpp',
+    'FakeVirtualFileSystemService.cpp',
     'FileSystemProvider.cpp',
     'FileSystemProviderAbortEvent.cpp',
     'FileSystemProviderCloseFileEvent.cpp',

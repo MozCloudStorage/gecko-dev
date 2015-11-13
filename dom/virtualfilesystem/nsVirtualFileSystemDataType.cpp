@@ -12,8 +12,221 @@ namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
+NS_IMPL_ISUPPORTS(nsVirtualFileSystemRequestedOptions,
+                  nsIVirtualFileSystemRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemRequestedOptions::GetFileSystemId(nsAString& aFileSystemId)
+{
+  aFileSystemId = mFileSystemId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemRequestedOptions::SetFileSystemId(const nsAString& aFileSystemId)
+{
+  mFileSystemId = aFileSystemId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemRequestedOptions::GetRequestId(uint32_t* aRequestId)
+{
+  if (NS_WARN_IF(!aRequestId)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aRequestId = mRequestId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemRequestedOptions::SetRequestId(uint32_t aRequestId)
+{
+  mRequestId = aRequestId;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemAbortRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemAbortRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemAbortRequestedOptions::GetOperationRequestId(uint32_t *aOperationRequestId)
+{
+  if (NS_WARN_IF(!aOperationRequestId)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aOperationRequestId = mOperationRequestId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemAbortRequestedOptions::SetOperationRequestId(uint32_t aOperationRequestId)
+{
+  mOperationRequestId = aOperationRequestId;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemCloseFileRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemCloseFileRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemCloseFileRequestedOptions::GetOpenRequestId(uint32_t* aOpenRequestId)
+{
+  if (NS_WARN_IF(!aOpenRequestId)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aOpenRequestId = mOpenRequestId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemCloseFileRequestedOptions::SetOpenRequestId(uint32_t aOpenRequestId)
+{
+   mOpenRequestId = aOpenRequestId;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemGetMetadataRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemGetMetadataRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemGetMetadataRequestedOptions::GetEntryPath(nsAString& aEntryPath)
+{
+  aEntryPath = mEntryPath;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemGetMetadataRequestedOptions::SetEntryPath(const nsAString& aEntryPath)
+{
+  mEntryPath = aEntryPath;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemOpenFileRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemOpenFileRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemOpenFileRequestedOptions::GetFilePath(nsAString& aFilePath)
+{
+  aFilePath = mFilePath;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemOpenFileRequestedOptions::SetFilePath(const nsAString & aFilePath)
+{
+  mFilePath = aFilePath;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemOpenFileRequestedOptions::GetMode(uint32_t* aMode)
+{
+  if (NS_WARN_IF(!aMode)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aMode = mMode;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemOpenFileRequestedOptions::SetMode(uint32_t aMode)
+{
+  mMode = aMode;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemReadDirectoryRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemReadDirectoryRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadDirectoryRequestedOptions::GetDirPath(nsAString& aDirPath)
+{
+  aDirPath = mDirectoryPath;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadDirectoryRequestedOptions::SetDirPath(const nsAString& aDirPath)
+{
+  mDirectoryPath = aDirPath;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemReadFileRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemReadFileRequestedOptions)
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadFileRequestedOptions::GetOpenRequestId(uint32_t* aOpenRequestId)
+{
+  if (NS_WARN_IF(!aOpenRequestId)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aOpenRequestId = mOpenRequestId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadFileRequestedOptions::SetOpenRequestId(uint32_t aOpenRequestId)
+{
+  mOpenRequestId = aOpenRequestId;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadFileRequestedOptions::GetOffset(uint64_t* aOffset)
+{
+  if (NS_WARN_IF(!aOffset)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aOffset = mOffset;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadFileRequestedOptions::SetOffset(uint64_t aOffset)
+{
+   mOffset = aOffset;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadFileRequestedOptions::GetLength(uint64_t* aLength)
+{
+  if (NS_WARN_IF(!aLength)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aLength = mLength;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemReadFileRequestedOptions::SetLength(uint64_t aLength)
+{
+  mLength = aLength;
+  return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemUnmountRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
+                            nsIVirtualFileSystemUnmountRequestedOptions)
+
 NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemMountRequestedOptions,
-                            FileSystemProviderRequestedOptions,
+                            nsVirtualFileSystemRequestedOptions,
                             nsIVirtualFileSystemMountRequestedOptions)
 
 NS_IMETHODIMP
@@ -66,7 +279,7 @@ nsVirtualFileSystemMountRequestedOptions::SetOpenedFilesLimit(uint32_t aOpenedFi
 }
 
 NS_IMPL_ISUPPORTS_INHERITED(nsVirtualFileSystemOpenedFileInfo,
-                            OpenFileRequestedOptions,
+                            nsVirtualFileSystemOpenFileRequestedOptions,
                             nsIVirtualFileSystemOpenedFileInfo)
 
 NS_IMETHODIMP

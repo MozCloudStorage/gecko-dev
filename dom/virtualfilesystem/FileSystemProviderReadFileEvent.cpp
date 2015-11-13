@@ -5,8 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderReadFileEvent.h"
-#include "nsVirtualFileSystemRequestValue.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
+#include "nsVirtualFileSystemRequestValue.h"
 
 namespace mozilla {
 namespace dom {
@@ -25,8 +26,24 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ReadFileRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(ReadFileRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemReadFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+ReadFileRequestedOptions::ReadFileRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+  nsCOMPtr<nsIVirtualFileSystemReadFileRequestedOptions> options =
+    do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    return;
+  }
+
+  options->GetOpenRequestId(&mOpenRequestId);
+  options->GetOffset(&mOffset);
+  options->GetLength(&mLength);
+}
 
 JSObject*
 ReadFileRequestedOptions::WrapObject(JSContext* aCx,
@@ -35,58 +52,22 @@ ReadFileRequestedOptions::WrapObject(JSContext* aCx,
   return ReadFileRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-ReadFileRequestedOptions::GetOpenRequestId(uint32_t* aOpenRequestId)
+uint32_t
+ReadFileRequestedOptions::OpenRequestId() const
 {
-  if (NS_WARN_IF(!aOpenRequestId)) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  *aOpenRequestId = mOpenRequestId;
-  return NS_OK;
+  return mOpenRequestId;
 }
 
-NS_IMETHODIMP
-ReadFileRequestedOptions::SetOpenRequestId(uint32_t aOpenRequestId)
+uint64_t
+ReadFileRequestedOptions::Offset() const
 {
-  mOpenRequestId = aOpenRequestId;
-  return NS_OK;
+  return mOffset;
 }
 
-NS_IMETHODIMP
-ReadFileRequestedOptions::GetOffset(uint64_t* aOffset)
+uint64_t
+ReadFileRequestedOptions::Length() const
 {
-  if (NS_WARN_IF(!aOffset)) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  *aOffset = mOffset;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ReadFileRequestedOptions::SetOffset(uint64_t aOffset)
-{
-   mOffset = aOffset;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ReadFileRequestedOptions::GetLength(uint64_t* aLength)
-{
-  if (NS_WARN_IF(!aLength)) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  *aLength = mLength;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ReadFileRequestedOptions::SetLength(uint64_t aLength)
-{
-  mLength = aLength;
-  return NS_OK;
+  return mLength;
 }
 
 FileSystemProviderReadFileEvent::FileSystemProviderReadFileEvent(
@@ -116,12 +97,7 @@ nsresult
 FileSystemProviderReadFileEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadFileRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<ReadFileRequestedOptions> options = new ReadFileRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("readfilerequested"),
                                       options);
   return NS_OK;

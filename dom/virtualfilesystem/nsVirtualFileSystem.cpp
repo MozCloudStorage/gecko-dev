@@ -96,8 +96,9 @@ nsVirtualFileSystem::GetInfo(nsIVirtualFileSystemInfo** aInfo)
 NS_IMETHODIMP
 nsVirtualFileSystem::Abort(const uint32_t aOperationId, uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
   nsCOMPtr<nsIVirtualFileSystemAbortRequestedOptions> option =
-     do_CreateInstance(VIRTUAL_FILE_SYSTEM_ABORT_REQUESTED_OPTIONS_CONTRACT_ID);
+  do_CreateInstance(VIRTUAL_FILE_SYSTEM_ABORT_REQUESTED_OPTIONS_CONTRACT_ID);
 
   nsString fileSystemId;
   mInfo->GetFileSystemId(fileSystemId);
@@ -120,6 +121,7 @@ nsVirtualFileSystem::OpenFile(const nsAString& aPath,
                          const uint16_t aMode,
                          uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
   nsCOMPtr<nsIVirtualFileSystemOpenFileRequestedOptions> option =
   do_CreateInstance(VIRTUAL_FILE_SYSTEM_OPENFILE_REQUESTED_OPTIONS_CONTRACT_ID);
 
@@ -153,8 +155,10 @@ NS_IMETHODIMP
 nsVirtualFileSystem::CloseFile(const uint32_t aOpenFileId,
                           uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
   nsCOMPtr<nsIVirtualFileSystemCloseFileRequestedOptions> option =
   do_CreateInstance(VIRTUAL_FILE_SYSTEM_CLOSEFILE_REQUESTED_OPTIONS_CONTRACT_ID);
+
 
   nsString fileSystemId;
   mInfo->GetFileSystemId(fileSystemId);
@@ -177,29 +181,34 @@ NS_IMETHODIMP
 nsVirtualFileSystem::GetMetadata(const nsAString& aEntryPath,
                             uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+  LOG("GetMetadata");
   nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestedOptions> option =
   do_CreateInstance(VIRTUAL_FILE_SYSTEM_GETMETADATA_REQUESTED_OPTIONS_CONTRACT_ID);
 
   nsString fileSystemId;
   mInfo->GetFileSystemId(fileSystemId);
   option->SetFileSystemId(fileSystemId);
+
   option->SetEntryPath(aEntryPath);
 
   RefPtr<nsIVirtualFileSystemCallback> callback = new nsVirtualFileSystemCallback(this);
 
-  MOZ_ASSERT(mRequestManager);
-
-  return mRequestManager->CreateRequest(
+  //MOZ_ASSERT(mRequestManager);
+  LOG("Call RequestManager::CreateRequest");
+  nsresult rv = mRequestManager->CreateRequest(
                              nsIVirtualFileSystemRequestManager::REQUEST_GETMETADATA,
                              option,
                              callback,
                              aRequestId);
+  return rv;
 }
 
 NS_IMETHODIMP
 nsVirtualFileSystem::ReadDirectory(const nsAString& aDirPath,
                               uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
   nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestedOptions> option =
   do_CreateInstance(VIRTUAL_FILE_SYSTEM_READDIRECTORY_REQUESTED_OPTIONS_CONTRACT_ID);
 
@@ -225,6 +234,7 @@ nsVirtualFileSystem::ReadFile(const uint32_t aOpenFileId,
                          const uint64_t aLength,
                          uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
   nsCOMPtr<nsIVirtualFileSystemReadFileRequestedOptions> option =
   do_CreateInstance(VIRTUAL_FILE_SYSTEM_READFILE_REQUESTED_OPTIONS_CONTRACT_ID);
 
@@ -249,13 +259,21 @@ nsVirtualFileSystem::ReadFile(const uint32_t aOpenFileId,
 NS_IMETHODIMP
 nsVirtualFileSystem::Unmount(uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+  nsCOMPtr<nsIVirtualFileSystemUnmountRequestedOptions> option =
+  do_CreateInstance(VIRTUAL_FILE_SYSTEM_UNMOUNT_REQUESTED_OPTIONS_CONTRACT_ID);
+
+  nsString fileSystemId;
+  mInfo->GetFileSystemId(fileSystemId);
+  option->SetFileSystemId(fileSystemId);
+
   RefPtr<nsIVirtualFileSystemCallback> callback = new nsVirtualFileSystemCallback(this);
 
   MOZ_ASSERT(mRequestManager);
 
   return mRequestManager->CreateRequest(
                                 nsIVirtualFileSystemRequestManager::REQUEST_UNMOUNT,
-                                nullptr,
+                                option,
                                 callback,
                                 aRequestId);
 }

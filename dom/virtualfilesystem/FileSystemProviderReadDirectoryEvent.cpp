@@ -27,8 +27,22 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ReadDirectoryRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(ReadDirectoryRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemReadDirectoryRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+ReadDirectoryRequestedOptions::ReadDirectoryRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+  nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestedOptions> options =
+    do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    return;
+  }
+
+  options->GetDirPath(mDirectoryPath);
+}
 
 JSObject*
 ReadDirectoryRequestedOptions::WrapObject(JSContext* aCx,
@@ -37,18 +51,10 @@ ReadDirectoryRequestedOptions::WrapObject(JSContext* aCx,
   return ReadDirectoryRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-ReadDirectoryRequestedOptions::GetDirPath(nsAString& aDirPath)
+void
+ReadDirectoryRequestedOptions::GetDirectoryPath(nsAString& aPath) const
 {
-  aDirPath = mDirectoryPath;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ReadDirectoryRequestedOptions::SetDirPath(const nsAString& aDirPath)
-{
-  mDirectoryPath = aDirPath;
-  return NS_OK;
+  aPath = mDirectoryPath;
 }
 
 FileSystemProviderReadDirectoryEvent::FileSystemProviderReadDirectoryEvent(
@@ -78,12 +84,8 @@ nsresult
 FileSystemProviderReadDirectoryEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<ReadDirectoryRequestedOptions> options =
+    new ReadDirectoryRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("readdirectoryrequested"),
                                       options);
   return NS_OK;

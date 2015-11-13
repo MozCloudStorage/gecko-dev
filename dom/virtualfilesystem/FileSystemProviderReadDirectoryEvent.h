@@ -19,23 +19,18 @@ namespace dom {
 struct EntryMetadata;
 
 class ReadDirectoryRequestedOptions final : public FileSystemProviderRequestedOptions
-                                          , public nsIVirtualFileSystemReadDirectoryRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ReadDirectoryRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMREADDIRECTORYREQUESTEDOPTIONS
 
-  explicit ReadDirectoryRequestedOptions() = default;
+  explicit ReadDirectoryRequestedOptions(nsISupports* aParent,
+                                         nsIVirtualFileSystemRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  void GetDirectoryPath(nsAString& aPath) const
-  {
-    aPath = mDirectoryPath;
-  }
+  void GetDirectoryPath(nsAString& aPath) const;
 
 private:
   virtual ~ReadDirectoryRequestedOptions() = default;

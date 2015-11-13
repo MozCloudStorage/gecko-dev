@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderEvent.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -18,8 +19,18 @@ NS_IMPL_CYCLE_COLLECTING_RELEASE(FileSystemProviderRequestedOptions)
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(FileSystemProviderRequestedOptions)
   NS_WRAPPERCACHE_INTERFACE_MAP_ENTRY
   NS_INTERFACE_MAP_ENTRY(nsISupports)
-  NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemRequestedOptions)
 NS_INTERFACE_MAP_END
+
+FileSystemProviderRequestedOptions::FileSystemProviderRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : mParent(aParent)
+{
+  if (aOptions) {
+    aOptions->GetFileSystemId(mFileSystemId);
+    aOptions->GetRequestId(&mRequestId);
+  }
+}
 
 JSObject*
 FileSystemProviderRequestedOptions::WrapObject(JSContext* aCx,
@@ -28,36 +39,16 @@ FileSystemProviderRequestedOptions::WrapObject(JSContext* aCx,
   return FileSystemProviderRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-FileSystemProviderRequestedOptions::GetFileSystemId(nsAString& aFileSystemId)
+uint32_t
+FileSystemProviderRequestedOptions::RequestId() const
+{
+  return mRequestId;
+}
+
+void
+FileSystemProviderRequestedOptions::GetFileSystemId(nsAString& aFileSystemId) const
 {
   aFileSystemId = mFileSystemId;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-FileSystemProviderRequestedOptions::SetFileSystemId(const nsAString& aFileSystemId)
-{
-  mFileSystemId = aFileSystemId;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-FileSystemProviderRequestedOptions::GetRequestId(uint32_t* aRequestId)
-{
-  if (NS_WARN_IF(!aRequestId)) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  *aRequestId = mRequestId;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-FileSystemProviderRequestedOptions::SetRequestId(uint32_t aRequestId)
-{
-  mRequestId = aRequestId;
-  return NS_OK;
 }
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(FileSystemProviderEvent)
@@ -122,12 +113,10 @@ FileSystemProviderEvent::ErrorCallback(const FileSystemProviderError& aError)
 
 void
 FileSystemProviderEvent::InitFileSystemProviderEventInternal(const nsAString& aType,
-                                                             nsIVirtualFileSystemRequestedOptions* aOptions)
+                                                             FileSystemProviderRequestedOptions* aOptions)
 {
   Event::InitEvent(aType, false, false);
-
-  mOptions = static_cast<FileSystemProviderRequestedOptions*>(aOptions);
-  mOptions->SetParentObject(mOwner);
+  mOptions = aOptions;
 }
 
 } // namespace dom

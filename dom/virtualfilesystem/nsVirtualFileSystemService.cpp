@@ -28,7 +28,7 @@ namespace virtualfilesystem {
 
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemService, nsIVirtualFileSystemService)
 
-StaticRefPtr<nsIVirtualFileSystemService> nsVirtualFileSystemService::sService;
+StaticRefPtr<nsVirtualFileSystemService> nsVirtualFileSystemService::sService;
 
 nsVirtualFileSystemService::nsVirtualFileSystemService()
   : mArrayMonitor("nsVirtualFileSystemService"),
@@ -41,13 +41,13 @@ nsVirtualFileSystemService::~nsVirtualFileSystemService()
 }
 
 //static
-already_AddRefed<nsIVirtualFileSystemService>
+already_AddRefed<nsVirtualFileSystemService>
 nsVirtualFileSystemService::GetSingleton()
 {
   if (!sService) {
     sService = new nsVirtualFileSystemService();
   }
-  RefPtr<nsIVirtualFileSystemService> service = sService.get();
+  RefPtr<nsVirtualFileSystemService> service = sService.get();
   return service.forget();
 }
 
@@ -196,12 +196,6 @@ nsVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aCloudNames)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsVirtualFileSystemService::GetRequestManagerById(const nsAString& aFileSystemId,
-                                                  nsIVirtualFileSystemRequestManager** aMgr)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
 /////////////////////////////////////////////////////////////////
 already_AddRefed<nsIVirtualFileSystem>
 nsVirtualFileSystemService::FindVirtualFileSystemById(const nsAString& aFileSystemId)
@@ -238,6 +232,13 @@ nsVirtualFileSystemService::CreateMountPoint(const nsAString& aFileSystemId)
   mountPoint.Append(NS_LITERAL_STRING("/"));
   mountPoint.Append(aFileSystemId);
   return mountPoint;
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystemService::GetRequestManagerById(const nsAString& aFileSystemId,
+                                                  nsIVirtualFileSystemRequestManager** aManager)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 } // end namespace virtualfilesystem

@@ -26,8 +26,22 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(GetMetadataRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(GetMetadataRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemGetMetadataRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+GetMetadataRequestedOptions::GetMetadataRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+  nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestedOptions> options =
+    do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    return;
+  }
+
+  options->GetEntryPath(mEntryPath);
+}
 
 JSObject*
 GetMetadataRequestedOptions::WrapObject(JSContext* aCx,
@@ -36,18 +50,10 @@ GetMetadataRequestedOptions::WrapObject(JSContext* aCx,
   return GetMetadataRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-GetMetadataRequestedOptions::GetEntryPath(nsAString& aEntryPath)
+void
+GetMetadataRequestedOptions::GetEntryPath(nsAString& aPath) const
 {
-  aEntryPath = mEntryPath;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-GetMetadataRequestedOptions::SetEntryPath(const nsAString& aEntryPath)
-{
-  mEntryPath = aEntryPath;
-  return NS_OK;
+  aPath = mEntryPath;
 }
 
 FileSystemProviderGetMetadataEvent::FileSystemProviderGetMetadataEvent(
@@ -77,12 +83,7 @@ nsresult
 FileSystemProviderGetMetadataEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<GetMetadataRequestedOptions> options = new GetMetadataRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("getmetadatarequested"),
                                       options);
   return NS_OK;

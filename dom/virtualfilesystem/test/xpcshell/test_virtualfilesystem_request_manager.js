@@ -157,16 +157,16 @@ add_test(function test_virtualfilesystem_callback_onError() {
 add_test(function test_virtualfilesystem_callback_in_order() {
   var manager = Cc["@mozilla.org/virtualfilesystem/virtualfilesystem-request-manager;1"].
                 createInstance(Ci.nsIVirtualFileSystemRequestManager);
-  var baseRequestId = 0;
-  var currentRequestId = 0;
   var requestCount = 5;
+  var requestIdArray = [];
 
+  var count = 0;
   var callback = {
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIVirtualFileSystemCallback]),
 
     onSuccess: function(aRequestId, aValue, aHasMore) {
-      equal(aRequestId, currentRequestId);
-      currentRequestId++;
+      equal(aRequestId, requestIdArray[count]);
+      count++;
     },
 
     onError: function(aRequestId, aErrorCode) {},
@@ -175,13 +175,11 @@ add_test(function test_virtualfilesystem_callback_in_order() {
   manager.setRequestDispatcher(emptyDispatcher);
   for (var i = 0; i < requestCount; i++) {
     var id = manager.createRequest(Ci.nsIVirtualFileSystemRequestManager.REQUEST_GETMETADATA, option, callback);
-    if (i ==0) {
-      currentRequestId = id;
-    }
+    requestIdArray.push(id);
   }
 
-  for (var i = 0; i < requestCount; i++) {
-    manager.fufillRequest(requestCount + currentRequestId - i - 1, null, false);
+  for (var i = requestCount - 1; i > -1; i--) {
+    manager.fufillRequest(requestIdArray[i], null, false);
   }
 
   run_next_test();

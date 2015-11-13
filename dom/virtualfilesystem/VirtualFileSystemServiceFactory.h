@@ -20,6 +20,7 @@ class VirtualFileSystemServiceFactory
 {
 public:
   static already_AddRefed<nsIVirtualFileSystemService> AutoCreateVirtualFileSystemService();
+
 };
 
 } // namespace dom

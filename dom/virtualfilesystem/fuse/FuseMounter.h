@@ -35,6 +35,30 @@ private:
   nsString mMountPoint;
 };
 
+class MounterResponseRunnable final : public nsRunnable
+{
+public:
+  NS_INLINE_DECL_REFCOUNTING(MountResponseRunnable);
+  enum TYPE {
+     SUCCESS = 0,
+     ERROR = 1
+  };
+
+  MounterResponseRunnable(nsIVirtualFileSystemCallback* aCallback,
+                          const uint32_t aRequestId,
+                          const uint32_t aError,
+                          const MounterResponseRunnable::TYPE aType);
+
+
+  nsresult Run();
+
+private:
+  RefPtr<nsIVirtualFileSystemCallback> mCallback;
+  uint32_t mRequestId;
+  uint32_t mError;
+  TYPE mType;
+};
+
 class FuseMounter final
 {
 public:
@@ -46,10 +70,12 @@ public:
   void Unmount(nsIVirtualFileSystemCallback* aCallback,
                const uint32_t aRequestId);
 private:
+
+
   class FuseMountRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseInitRunnable)
+    NS_INLINE_DECL_REFCOUNTING(FuseMountRunnable)
 
     FuseMountRunnable(FuseHandler* aFuseHandler,
                      nsIVirtualFileSystemCallback* aCallback,
@@ -70,7 +96,7 @@ private:
   class FuseUnmountRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseCloseRunnable)
+    NS_INLINE_DECL_REFCOUNTING(FuseUnmountRunnable)
 
     FuseUnmountRunnable(FuseHandler* aFuseHandler,
                       nsIVirtualFileSystemCallback* aCallback,

@@ -5,7 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "FakeVirtualFileSystemService.h"
+#include "mozilla/StaticPtr.h"
+#include "mozilla/ClearOnShutdown.h"
 #include "nsCOMPtr.h"
+#include "nsComponentManagerUtils.h"
+#include "nsIMutableArray.h"
 #include "nsIVirtualFileSystemCallback.h"
 #include "nsVirtualFileSystemDataType.h"
 #include "nsThreadUtils.h"
@@ -57,29 +61,19 @@ private:
 
 NS_IMPL_ISUPPORTS0(FakeVirtualFileSystemService::VirtualFileSystem)
 
-NS_IMPL_CYCLE_COLLECTION_CLASS(FakeVirtualFileSystemService)
+NS_IMPL_ISUPPORTS(FakeVirtualFileSystemService,
+                  nsIVirtualFileSystemService)
 
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(FakeVirtualFileSystemService)
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+StaticRefPtr<FakeVirtualFileSystemService> sSingleton;
 
-NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(FakeVirtualFileSystemService)
-NS_IMPL_CYCLE_COLLECTION_UNLINK_END
-
-NS_IMPL_CYCLE_COLLECTING_ADDREF(FakeVirtualFileSystemService)
-NS_IMPL_CYCLE_COLLECTING_RELEASE(FakeVirtualFileSystemService)
-
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(FakeVirtualFileSystemService)
-  NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemService)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
-NS_INTERFACE_MAP_END
-
-FakeVirtualFileSystemService::FakeVirtualFileSystemService()
+/* static */ FakeVirtualFileSystemService*
+FakeVirtualFileSystemService::GetSingleton()
 {
-
-}
-
-FakeVirtualFileSystemService::~FakeVirtualFileSystemService()
-{
+  if (!sSingleton) {
+    sSingleton = new FakeVirtualFileSystemService();
+    ClearOnShutdown(&sSingleton);
+  }
+  return sSingleton;
 }
 
 NS_IMETHODIMP
@@ -134,6 +128,7 @@ FakeVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountRequestedOption
   aOptions->GetRequestId(&requestId);
   nsString fileSystemId;
   aOptions->GetFileSystemId(fileSystemId);
+
   uint32_t index;
   if (!FindVirtualFileSystemById(fileSystemId, index)) {
     nsCOMPtr<nsIRunnable> callback = new MountUnmountErrorCallback(requestId,
@@ -164,18 +159,11 @@ FakeVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSys
   info->SetWritable(fileSystem->Writable());
   info->SetOpenedFilesLimit(fileSystem->OpenedFilesLimit());
 
-  nsresult rv;
-  nsCOMPtr<nsIMutableArray> openedFiles = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return rv;
-  }
-
   nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> mockFile =
-     MockOpenedFileInfo(NS_LITERAL_STRING("/dummy/path/"),
-                        nsIVirtualFileSystemOpenFileRequestedOptions::OPEN_MODE_READ,
-                        1);
-  openedFiles->AppendElement(mockFile, false);
-  info->SetOpenedFiles(openedFiles);
+    MockOpenedFileInfo(NS_LITERAL_STRING("/dummy/path/"),
+                       nsIVirtualFileSystemOpenFileRequestedOptions::OPEN_MODE_READ,
+                       1);
+  info->AppendOpenedFile(mockFile);
   info.forget(aInfo);
   return NS_OK;
 }
@@ -202,7 +190,7 @@ FakeVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aFileSystems
 
 NS_IMETHODIMP
 FakeVirtualFileSystemService::GetRequestManagerById(const nsAString& aFileSystemId,
-                                                     nsIVirtualFileSystemRequestManager** aManager)
+                                                    nsIVirtualFileSystemRequestManager** aManager)
 {
   uint32_t index;
   if (!FindVirtualFileSystemById(aFileSystemId, index)) {
@@ -221,7 +209,6 @@ FakeVirtualFileSystemService::MockOpenedFileInfo(const nsAString& aFilePath,
                                                  uint32_t aMode,
                                                  uint32_t aOpenRequestId)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
   nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> openedFile =
     new virtualfilesystem::nsVirtualFileSystemOpenedFileInfo();
   openedFile->SetFilePath(aFilePath);

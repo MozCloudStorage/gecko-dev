@@ -32,7 +32,7 @@ public:
   typedef nsTArray<RefPtr<nsIVirtualFileSystem>> VirtualFileSystemArray;
 
 public:
-  static already_AddRefed<nsIVirtualFileSystemService> GetSingleton();
+  static already_AddRefed<nsVirtualFileSystemService> GetSingleton();
 
   nsVirtualFileSystemService();
 
@@ -46,7 +46,7 @@ private:
 private:
   Monitor mArrayMonitor;
   VirtualFileSystemArray mVirtualFileSystemArray;
-  static StaticRefPtr<nsIVirtualFileSystemService> sService;
+  static StaticRefPtr<nsVirtualFileSystemService> sService;
 };
 
 } // end namespace virtualfilesystem

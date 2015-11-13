@@ -18,33 +18,22 @@ namespace mozilla {
 namespace dom {
 
 class ReadFileRequestedOptions final : public FileSystemProviderRequestedOptions
-                                     , public nsIVirtualFileSystemReadFileRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ReadFileRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMREADFILEREQUESTEDOPTIONS
 
-  explicit ReadFileRequestedOptions() = default;
+  explicit ReadFileRequestedOptions(nsISupports* aParent,
+                                    nsIVirtualFileSystemRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  uint32_t OpenRequestId() const
-  {
-    return mOpenRequestId;
-  }
+  uint32_t OpenRequestId() const;
 
-  uint64_t Offset() const
-  {
-    return mOffset;
-  }
+  uint64_t Offset() const;
 
-  uint64_t Length() const
-  {
-    return mLength;
-  }
+  uint64_t Length() const;
 
 private:
   virtual ~ReadFileRequestedOptions() = default;

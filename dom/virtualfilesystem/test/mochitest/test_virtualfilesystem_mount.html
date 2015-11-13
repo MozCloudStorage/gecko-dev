@@ -14,7 +14,7 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1026350
 </a>
 <script type="application/javascript;version=1.8">
 
-'use strict';
+"use strict";
 
 SimpleTest.waitForExplicitFinish();
 
@@ -64,11 +64,11 @@ function testMount() {
 
 
 function runTest() {
-  ok(navigator.fileSystemProvider, 'should have navigator.fileSystemProvider');
+  ok(navigator.fileSystemProvider, "should have navigator.fileSystemProvider");
 
   testMount()
   .then(function() {
-    info('test finished');
+    info("test finished");
     SimpleTest.finish();
   });
 }
@@ -77,10 +77,10 @@ SpecialPowers.pushPrefEnv({"set": [["device.storage.enabled", true],
                                     //to ignore app scope check.
                                    ["dom.ignore_webidl_scope_checks", true]]}, function() {
   SpecialPowers.pushPermissions(
-    [{'type': 'filesystemprovider', 'allow': true, 'context': document}], runTest);
+    [{"type": "filesystemprovider", "allow": true, "context": document}], runTest);
 });
 
-</script>
-</pre>
-</body>
-</html>
+ </script>
+ </pre>
+ </body>
+ </html>

@@ -7,7 +7,6 @@
 #ifndef mozilla_dom_FileSystemProviderEvent_h
 #define mozilla_dom_FileSystemProviderEvent_h
 
-#include "nsIVirtualFileSystemDataType.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/ErrorResult.h"
 #include "mozilla/dom/BindingUtils.h"
@@ -16,36 +15,30 @@
 
 class nsIVirtualFileSystemRequestManager;
 class nsIVirtualFileSystemRequestValue;
+class nsIVirtualFileSystemRequestedOptions;
 
 namespace mozilla {
 namespace dom {
 
-class FileSystemProviderRequestedOptions : public nsIVirtualFileSystemRequestedOptions
+class FileSystemProviderRequestedOptions : public nsISupports
                                          , public nsWrapperCache
 {
 public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(FileSystemProviderRequestedOptions)
-  NS_DECL_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS
 
-  explicit FileSystemProviderRequestedOptions() = default;
+  explicit FileSystemProviderRequestedOptions(nsISupports* aParent,
+                                              nsIVirtualFileSystemRequestedOptions* aOptions);
 
   nsISupports* GetParentObject() const
   {
     return mParent;
   }
 
-  void SetParentObject(nsISupports* aParent)
-  {
-    mParent = aParent;
-  }
-
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  uint32_t RequestId() const
-  {
-    return mRequestId;
-  }
+  uint32_t RequestId() const;
+  void GetFileSystemId(nsAString& aFileSystemId) const;
 
 protected:
   virtual ~FileSystemProviderRequestedOptions() = default;
@@ -77,7 +70,7 @@ public:
 protected:
   virtual ~FileSystemProviderEvent();
   void InitFileSystemProviderEventInternal(const nsAString& aType,
-                                           nsIVirtualFileSystemRequestedOptions* aOptions);
+                                           FileSystemProviderRequestedOptions* aOptions);
 
   nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
   RefPtr<FileSystemProviderRequestedOptions> mOptions;

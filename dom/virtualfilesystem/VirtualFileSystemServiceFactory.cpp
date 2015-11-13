@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-//#include "mozilla/dom/FakeVirtualFileSystemService.h"
+#include "mozilla/dom/FakeVirtualFileSystemService.h"
 #include "nsVirtualFileSystemService.h"
 #include "VirtualFileSystemServiceFactory.h"
 #include "nsIVirtualFileSystemService.h"
@@ -16,9 +16,10 @@ namespace dom {
 VirtualFileSystemServiceFactory::AutoCreateVirtualFileSystemService()
 {
   nsresult rv;
-  nsCOMPtr<nsIVirtualFileSystemService> service = do_GetService(VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID);
+  nsCOMPtr<nsIVirtualFileSystemService> service =
+    do_GetService(VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID);
   if (!service) {
-    service = do_CreateInstance(VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID, &rv);
+    service = do_GetService(FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID, &rv);
 
     if (NS_WARN_IF(NS_FAILED(rv))) {
       return nullptr;

@@ -26,11 +26,12 @@ namespace dom {
 class FakeVirtualFileSystemService final : public nsIVirtualFileSystemService
 {
 public:
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
-  NS_DECL_CYCLE_COLLECTION_CLASS(FakeVirtualFileSystemService)
+  NS_DECL_ISUPPORTS
   NS_DECL_NSIVIRTUALFILESYSTEMSERVICE
 
-  FakeVirtualFileSystemService();
+  FakeVirtualFileSystemService() = default;
+
+  static FakeVirtualFileSystemService* GetSingleton();
 
 private:
   class VirtualFileSystem final : public nsISupports {
@@ -84,22 +85,19 @@ private:
     bool mWritable;
     uint32_t mOpenedFilesLimit;
     nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
-
   };
 
+   ~FakeVirtualFileSystemService() = default;
   struct VirtualFileSystemComparator {
     bool Equals(const RefPtr<VirtualFileSystem>& aA, const RefPtr<VirtualFileSystem>& aB) const {
       return aA->FileSystemId() == aB->FileSystemId();
     }
   };
-
+  bool FindVirtualFileSystemById(const nsAString& aFileSystemId, uint32_t& aIndex);
   already_AddRefed<nsIVirtualFileSystemOpenedFileInfo>
     MockOpenedFileInfo(const nsAString& aFilePath,
                        uint32_t aMode,
                        uint32_t aOpenRequestId);
-
-  ~FakeVirtualFileSystemService();
-  bool FindVirtualFileSystemById(const nsAString& aFileSystemId, uint32_t& aIndex);
 
   nsTArray<RefPtr<VirtualFileSystem>> mVirtualFileSystems;
 };

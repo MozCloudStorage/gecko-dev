@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderCloseFileEvent.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -24,8 +25,22 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(CloseFileRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(CloseFileRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemCloseFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+CloseFileRequestedOptions::CloseFileRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+  nsCOMPtr<nsIVirtualFileSystemCloseFileRequestedOptions> options =
+    do_QueryInterface(aOptions);
+  if (!options) {
+    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    return;
+  }
+
+  options->GetOpenRequestId(&mOpenRequestId);
+}
 
 JSObject*
 CloseFileRequestedOptions::WrapObject(JSContext* aCx,
@@ -34,21 +49,10 @@ CloseFileRequestedOptions::WrapObject(JSContext* aCx,
   return CloseFileRequestedOptionsBinding::Wrap(aCx, this, aGivenProto);
 }
 
-NS_IMETHODIMP
-CloseFileRequestedOptions::GetOpenRequestId(uint32_t* aOpenRequestId)
+uint32_t
+CloseFileRequestedOptions::OpenRequestId() const
 {
-  NS_ENSURE_ARG_POINTER(aOpenRequestId);
-
-  *aOpenRequestId = mOpenRequestId;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-CloseFileRequestedOptions
-::SetOpenRequestId(uint32_t aOpenRequestId)
-{
-   mOpenRequestId = aOpenRequestId;
-  return NS_OK;
+  return mOpenRequestId;
 }
 
 FileSystemProviderCloseFileEvent::FileSystemProviderCloseFileEvent(
@@ -77,12 +81,7 @@ nsresult
 FileSystemProviderCloseFileEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemCloseFileRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<CloseFileRequestedOptions> options = new CloseFileRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("closefilerequested"),
                                       options);
   return NS_OK;

@@ -17,23 +17,18 @@ namespace mozilla {
 namespace dom {
 
 class GetMetadataRequestedOptions final : public FileSystemProviderRequestedOptions
-                                        , public nsIVirtualFileSystemGetMetadataRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(GetMetadataRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMGETMETADATAREQUESTEDOPTIONS
 
-  explicit GetMetadataRequestedOptions() = default;
+  explicit GetMetadataRequestedOptions(nsISupports* aParent,
+                                       nsIVirtualFileSystemRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  void GetEntryPath(nsAString& aPath) const
-  {
-    aPath = mEntryPath;
-  }
+  void GetEntryPath(nsAString& aPath) const;
 
 private:
   virtual ~GetMetadataRequestedOptions() = default;

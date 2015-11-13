@@ -15,6 +15,36 @@ namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
+class FileSystemProviderRequestRunnable : public nsRunnable
+{
+public:
+  NS_INLINE_DECL_REFCOUNTING(FuseMonitorRunnable)
+  FileSystemProviderRequestRunnable(FuseHandler* aHandler,
+                                    nsIVirtualFileSystem* aFileSystem);
+
+  void SetType(const uint32_t aType) { mType = aType; }
+  void SetPath(const nsAString& aPath) { mPath = aPath; }
+  void SetOperationId(const uint32_t aOperationId) { mOperationId = aOperationId; }
+  void SetOpenFileId(const uint32_t aOpenFileId) { mOpenFileId = aOpenFileId; }
+  void SetOpenMode(const uint32_t aOpenMode) { mOpenMode = aOpenMode; }
+  void SetOffset(const uint64_t aOffset) { mOffset = aOffset; }
+  void SetLength(const uint64_t aLength) { mLength = aLength; }
+
+  nsresult Run();
+
+private:
+  RefPtr<FuseHandler> mHandler;
+  RefPtr<nsIVirtualFileSystem> mFileSystem;
+  nsString mPath;
+  uint32_t mType;
+  uint32_t mOperationId;
+  uint32_t mOpenFileId;
+  uint32_t mOpenMode;
+  uint64_t mOffset;
+  uint64_t mLength;
+
+};
+
 class FuseRequestMonitor final
 {
 public:

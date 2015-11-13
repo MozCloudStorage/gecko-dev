@@ -172,8 +172,7 @@ interface nsIEntryMetadata : nsISupports
   "@mozilla.org/virtualfilesystem/virtualfilesystem-readfile-requested-options;1"
 
 #define VIRTUALFILESYSTEMUNMOUNTREQUESTEDOPTIONS_CID \
-  {0x819efda8, 0x1d61, 0x4522, {0xb2, 0xe0, 0x23, 0x29, 0x81, 0xb9, 0xdd, 0xde}}
+  {0xfe50939e, 0x50b8, 0x4ff2, { 0x99, 0xbc, 0xf5, 0x5e, 0x80, 0x3e, 0xaa, 0xab}}
 #define VIRTUAL_FILE_SYSTEM_UNMOUNT_REQUESTED_OPTIONS_CONTRACT_ID \
-  "@mozilla.org/virtualfilesystem/virtualfilesystem-readfile-requested-options;1"
-
+  "@mozilla.org/virtualfilesystem/virtualfilesystem-unmount-requested-options;1"
 %}

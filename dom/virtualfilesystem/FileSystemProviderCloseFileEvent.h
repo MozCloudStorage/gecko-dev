@@ -17,23 +17,18 @@ namespace mozilla {
 namespace dom {
 
 class CloseFileRequestedOptions final : public FileSystemProviderRequestedOptions
-                                      , public nsIVirtualFileSystemCloseFileRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(CloseFileRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMCLOSEFILEREQUESTEDOPTIONS
 
-  explicit CloseFileRequestedOptions() = default;
+  explicit CloseFileRequestedOptions(nsISupports* aParent,
+                                     nsIVirtualFileSystemRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  uint32_t OpenRequestId() const
-  {
-    return mOpenRequestId;
-  }
+  uint32_t OpenRequestId() const;
 
 private:
   virtual ~CloseFileRequestedOptions() = default;

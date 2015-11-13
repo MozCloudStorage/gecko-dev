@@ -129,10 +129,12 @@ nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequestManager(
 
 NS_IMETHODIMP
 nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
-                                                 nsIVirtualFileSystemRequestedOptions *aOption,
+                                                 nsIVirtualFileSystemRequestedOptions *aOptions,
                                                  nsIVirtualFileSystemCallback* aCallback,
                                                  uint32_t* aRequestId)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+
   if (NS_WARN_IF(!aRequestId)) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -143,7 +145,7 @@ nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
     return NS_ERROR_INVALID_ARG;
   }
 
-  if (NS_WARN_IF(!(aOption && aCallback))) {
+  if (NS_WARN_IF(!(aOptions && aCallback))) {
     return NS_ERROR_INVALID_ARG;
   }
 
@@ -154,14 +156,14 @@ nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
   MonitorAutoLock lock(mMonitor);
   RefPtr<nsVirtualFileSystemRequest> request = new nsVirtualFileSystemRequest(aRequestType,
                                                                               ++mRequestId,
-                                                                              aOption,
+                                                                              aOptions,
                                                                               aCallback);
   mRequestMap[mRequestId] = request;
   mRequestIdQueue.push_back(mRequestId);
-  aOption->SetRequestId(mRequestId);
+  aOptions->SetRequestId(mRequestId);
   nsCOMPtr<nsIRunnable> dispatchTask = new DispatchRequestTask(mRequestId,
                                                                aRequestType,
-                                                               aOption,
+                                                               aOptions,
                                                                mDispatcher);
   nsresult rv = NS_DispatchToCurrentThread(dispatchTask);
   if (NS_FAILED(rv)) {
@@ -178,6 +180,8 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
                                                  nsIVirtualFileSystemRequestValue* aValue,
                                                  bool aHasMore)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+
   if (NS_WARN_IF(aHasMore && !aValue)) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -205,11 +209,11 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
   else {
     request->mValue = aValue;
   }
-  printf_stderr("########################## Dump mRequestIdQueue before ##############\n");
+  /*printf_stderr("########################## Dump mRequestIdQueue before ##############\n");
   for (uint32_t i = 0; i < mRequestIdQueue.size(); i++) {
     printf_stderr("########################## mRequestIdQueue[%d] = %u\n", i, mRequestIdQueue[i]);
   }
-  printf_stderr("########################## Dump mRequestIdQueue end\n");
+  printf_stderr("########################## Dump mRequestIdQueue end\n");*/
 
   for (auto it = mRequestIdQueue.begin(); it != mRequestIdQueue.end();) {
     MOZ_ASSERT(mRequestMap.find(*it) != mRequestMap.end());
@@ -228,17 +232,19 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
     mRequestIdQueue.erase(it);
   }
 
-  printf_stderr("########################## Dump mRequestIdQueue after ###############\n");
+  /*printf_stderr("########################## Dump mRequestIdQueue after ###############\n");
   for (uint32_t i = 0; i < mRequestIdQueue.size(); i++) {
     printf_stderr("########################## mRequestIdQueue[%d] = %u\n", i, mRequestIdQueue[i]);
   }
-  printf_stderr("########################## Dump mRequestIdQueue end\n");
+  printf_stderr("########################## Dump mRequestIdQueue end\n");*/
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t aErrorCode)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+
   MonitorAutoLock lock(mMonitor);
   if (mRequestMap.find(aRequestId) == mRequestMap.end()) {
     return NS_ERROR_FAILURE;
@@ -257,6 +263,8 @@ NS_IMETHODIMP
 nsVirtualFileSystemRequestManager::SetRequestDispatcher(
   nsIFileSystemProviderEventDispatcher* aDispatcher)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+
   mDispatcher = aDispatcher;
   return NS_OK;
 }

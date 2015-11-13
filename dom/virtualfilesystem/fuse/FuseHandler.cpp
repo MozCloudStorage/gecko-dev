@@ -59,6 +59,8 @@ FuseHandler::FuseHandler(const nsAString& aFileSystemId,
   if (NS_FAILED(rv)) {
     ERR("Fail createing a new thread for request handling. [%x].", rv);
   }
+  GetNodeIdByPath(mMountPoint);
+  GetNodeIdByPath(NS_LITERAL_STRING("/"));
   MOZ_ASSERT(mRunnableThread);
 }
 

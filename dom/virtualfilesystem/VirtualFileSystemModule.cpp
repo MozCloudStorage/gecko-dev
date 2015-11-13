@@ -3,74 +3,78 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/dom/FakeVirtualFileSystemService.h"
+#include "mozilla/ModuleUtils.h"
+#include "nsIVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "nsVirtualFileSystemDataType.h"
-//#include "mozilla/dom/FakeVirtualFileSystemService.h"
-#include "nsIVirtualFileSystemDataType.h"
-#include "nsVirtualFileSystemService.h"
-#include "mozilla/dom/FileSystemProviderAbortEvent.h"
-#include "mozilla/dom/FileSystemProviderCloseFileEvent.h"
-#include "mozilla/dom/FileSystemProviderGetMetadataEvent.h"
-#include "mozilla/dom/FileSystemProviderOpenFileEvent.h"
-#include "mozilla/dom/FileSystemProviderReadDirectoryEvent.h"
-#include "mozilla/dom/FileSystemProviderReadFileEvent.h"
-#include "mozilla/dom/FileSystemProviderUnmountEvent.h"
-#include "mozilla/ModuleUtils.h"
 
-using mozilla::dom::virtualfilesystem::nsEntryMetadata;
-using mozilla::dom::AbortRequestedOptions;
-using mozilla::dom::CloseFileRequestedOptions;
-using mozilla::dom::OpenFileRequestedOptions;
-using mozilla::dom::GetMetadataRequestedOptions;
-using mozilla::dom::ReadDirectoryRequestedOptions;
-using mozilla::dom::ReadFileRequestedOptions;
-using mozilla::dom::UnmountRequestedOptions;
-//using mozilla::dom::FakeVirtualFileSystemService;
-using mozilla::dom::virtualfilesystem::nsVirtualFileSystemService;
+#ifdef MOZ_WIDGET_GONK
+#include "nsVirtualFileSystemService.h"
+#endif
+
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemAbortRequestedOptions;
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemCloseFileRequestedOptions;
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemOpenFileRequestedOptions;
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemGetMetadataRequestedOptions;
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestedOptions;
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemReadFileRequestedOptions;
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemUnmountRequestedOptions;
+using mozilla::dom::FakeVirtualFileSystemService;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemRequestManager;
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(AbortRequestedOptions)
+#ifdef MOZ_WIDGET_GONK
+using mozilla::dom::virtualfilesystem::nsVirtualFileSystemService;
+#endif
+
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemAbortRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMABORTREQUESTEDOPTIONS_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(CloseFileRequestedOptions)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemCloseFileRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMCLOSEFILEREQUESTEDOPTIONS_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(OpenFileRequestedOptions)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemOpenFileRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMOPENFILEREQUESTEDOPTIONS_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(GetMetadataRequestedOptions)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemGetMetadataRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMGETMETADATAREQUESTEDOPTIONS_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(ReadDirectoryRequestedOptions)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemReadDirectoryRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMREADDIRECTORYREQUESTEDOPTIONS_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(ReadFileRequestedOptions)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemReadFileRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMREADFILEREQUESTEDOPTIONS_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(UnmountRequestedOptions)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemUnmountRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMUNMOUNTREQUESTEDOPTIONS_CID);
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemRequestManager)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMREQUESTMANAGER_CID);
 
-//NS_GENERIC_FACTORY_CONSTRUCTOR(FakeVirtualFileSystemService)
-//NS_DEFINE_NAMED_CID(FAKEVIRTUALFILESYSTEMSERVICE_CID);
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(FakeVirtualFileSystemService,
+                                         FakeVirtualFileSystemService::GetSingleton)
+NS_DEFINE_NAMED_CID(FAKEVIRTUALFILESYSTEMSERVICE_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemService)
+#ifdef MOZ_WIDGET_GONK
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsVirtualFileSystemService,
+                                         nsVirtualFileSystemService::GetSingleton)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMSERVICE_CID);
+#endif
 
 static const mozilla::Module::CIDEntry kVirtualFileSystemModuleCIDs[] = {
-  { &kVIRTUALFILESYSTEMABORTREQUESTEDOPTIONS_CID, false, nullptr, AbortRequestedOptionsConstructor },
-  { &kVIRTUALFILESYSTEMCLOSEFILEREQUESTEDOPTIONS_CID, false, nullptr, CloseFileRequestedOptionsConstructor },
-  { &kVIRTUALFILESYSTEMOPENFILEREQUESTEDOPTIONS_CID, false, nullptr, OpenFileRequestedOptionsConstructor },
-  { &kVIRTUALFILESYSTEMGETMETADATAREQUESTEDOPTIONS_CID, false, nullptr, GetMetadataRequestedOptionsConstructor },
-  { &kVIRTUALFILESYSTEMREADDIRECTORYREQUESTEDOPTIONS_CID, false, nullptr, ReadDirectoryRequestedOptionsConstructor },
-  { &kVIRTUALFILESYSTEMREADFILEREQUESTEDOPTIONS_CID, false, nullptr, ReadFileRequestedOptionsConstructor },
-  { &kVIRTUALFILESYSTEMUNMOUNTREQUESTEDOPTIONS_CID, false, nullptr, UnmountRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMABORTREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemAbortRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMCLOSEFILEREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemCloseFileRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMOPENFILEREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemOpenFileRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMGETMETADATAREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemGetMetadataRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMREADDIRECTORYREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemReadDirectoryRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMREADFILEREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemReadFileRequestedOptionsConstructor },
+  { &kVIRTUALFILESYSTEMUNMOUNTREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemUnmountRequestedOptionsConstructor },
   { &kVIRTUALFILESYSTEMREQUESTMANAGER_CID, false, nullptr, nsVirtualFileSystemRequestManagerConstructor },
-//  { &kFAKEVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, FakeVirtualFileSystemServiceConstructor },
+  { &kFAKEVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, FakeVirtualFileSystemServiceConstructor },
+#ifdef MOZ_WIDGET_GONK
   { &kVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, nsVirtualFileSystemServiceConstructor },
-
+#endif
   { nullptr }
 };
 
@@ -83,8 +87,10 @@ static const mozilla::Module::ContractIDEntry kVirtualFileSystemModuleContracts[
   { VIRTUAL_FILE_SYSTEM_READFILE_REQUESTED_OPTIONS_CONTRACT_ID, &kVIRTUALFILESYSTEMREADFILEREQUESTEDOPTIONS_CID },
   { VIRTUAL_FILE_SYSTEM_UNMOUNT_REQUESTED_OPTIONS_CONTRACT_ID, &kVIRTUALFILESYSTEMUNMOUNTREQUESTEDOPTIONS_CID },
   { VIRTUAL_FILE_SYSTEM_REQUEST_MANAGER_CONTRACT_ID, &kVIRTUALFILESYSTEMREQUESTMANAGER_CID },
-//  { FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID, &kFAKEVIRTUALFILESYSTEMSERVICE_CID },
+  { FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID, &kFAKEVIRTUALFILESYSTEMSERVICE_CID },
+#ifdef MOZ_WIDGET_GONK
   { VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID, &kVIRTUALFILESYSTEMSERVICE_CID },
+#endif
   { nullptr }
 };
 

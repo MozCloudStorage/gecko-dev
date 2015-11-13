@@ -18,32 +18,20 @@ namespace mozilla {
 namespace dom {
 
 class OpenFileRequestedOptions : public FileSystemProviderRequestedOptions
-                               , public nsIVirtualFileSystemOpenFileRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(OpenFileRequestedOptions,
                                            FileSystemProviderRequestedOptions)
-  NS_FORWARD_NSIVIRTUALFILESYSTEMREQUESTEDOPTIONS(FileSystemProviderRequestedOptions::)
-  NS_DECL_NSIVIRTUALFILESYSTEMOPENFILEREQUESTEDOPTIONS
 
-  explicit OpenFileRequestedOptions() = default;
-  explicit OpenFileRequestedOptions(const nsAString& aFilePath, uint32_t aMode)
-    : mFilePath(aFilePath)
-    , mMode(static_cast<OpenFileMode>(aMode))
-  {}
+  explicit OpenFileRequestedOptions(nsISupports* aParent,
+                                    nsIVirtualFileSystemRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
-  void GetFilePath(nsAString& aPath) const
-  {
-    aPath = mFilePath;
-  }
+  void GetFilePath(nsAString& aPath) const;
 
-  OpenFileMode Mode() const
-  {
-    return mMode;
-  }
+  OpenFileMode Mode() const;
 
 protected:
   ~OpenFileRequestedOptions() = default;

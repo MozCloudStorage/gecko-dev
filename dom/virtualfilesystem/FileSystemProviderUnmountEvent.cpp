@@ -24,8 +24,14 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(UnmountRequestedOptions,
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(UnmountRequestedOptions)
-NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemUnmountRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
+
+UnmountRequestedOptions::UnmountRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemRequestedOptions* aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aOptions)
+{
+}
 
 JSObject*
 UnmountRequestedOptions::WrapObject(JSContext* aCx,
@@ -61,12 +67,7 @@ nsresult
 FileSystemProviderUnmountEvent::InitFileSystemProviderEvent(
   nsIVirtualFileSystemRequestedOptions* aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemUnmountRequestedOptions> options = do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false);
-    return NS_ERROR_INVALID_ARG;
-  }
-
+  RefPtr<UnmountRequestedOptions> options = new UnmountRequestedOptions(mOwner, aOptions);
   InitFileSystemProviderEventInternal(NS_LITERAL_STRING("unmountrequested"),
                                       options);
   return NS_OK;

@@ -14,21 +14,72 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1026350
 </a>
 <script type="application/javascript;version=1.8">
 
-'use strict';
+"use strict";
 
 SimpleTest.waitForExplicitFinish();
 
-function runTest() {
-  ok(navigator.fileSystemProvider, 'should have navigator.fileSystemProvider');
+var mockOptionRegisterer;
 
-  SimpleTest.finish();
+function testEvent() {
+  return new Promise(function(resolve, reject) {
+    netscape.security.PrivilegeManager.enablePrivilege('UniversalXPConnect');
+    var XPCOMUtils = SpecialPowers.Cu.import("resource://gre/modules/XPCOMUtils.jsm").XPCOMUtils
+    var Ci = SpecialPowers.Ci;
+    var vfsService = SpecialPowers.Cc["@mozilla.org/tv/fakevirtualfilesystemservice;1"].getService(Ci.nsIVirtualFileSystemService);
+    ok(vfsService, "must have vfsService");
+
+    var fileSystemProvider = navigator.fileSystemProvider;
+    var _fileSystemId = "dummyId";
+    var _displayName = "dummyFileSystem";
+    var _writable = true;
+    var _openedFilesLimit = 10;
+
+    fileSystemProvider.mount({fileSystemId: _fileSystemId,
+                              displayName: _displayName,
+                              writable: _writable,
+                              openedFilesLimit: _openedFilesLimit}).then(
+      function() {
+        ok(true, "mount ok.");
+        var requestManager = vfsService.getRequestManagerById(_fileSystemId);
+        ok(requestManager, "must have request manager.");
+        fileSystemProvider.addEventListener("abortrequested", function(event){
+          ok(true, "got event.");
+          console.log(event.options);
+          resolve();
+        });
+        var emptyCallback = {
+          QueryInterface: XPCOMUtils.generateQI([Ci.nsIVirtualFileSystemCallback]),
+          onSuccess: function(requestId, value, hasMore) {},
+          onError: function(requestId, error) {},
+        };
+
+        var abortOptions = SpecialPowers.Cc["@mozilla.org/virtualfilesystem/virtualfilesystem-abort-requested-options;1"].createInstance(Ci.nsIVirtualFileSystemAbortRequestedOptions);
+        requestManager.createRequest(Ci.nsIVirtualFileSystemRequestManager.REQUEST_ABORT, abortOptions, emptyCallback);
+      },
+      function(aError) {
+        ok(false, "Fail to mount: " + aError);
+        resolve();
+      }
+    );
+  });
+}
+
+
+function runTest() {
+  ok(navigator.fileSystemProvider, "should have navigator.fileSystemProvider");
+
+  testEvent()
+  .then(function() {
+    info("test finished");
+    SimpleTest.finish();
+  });
 }
 
 SpecialPowers.pushPrefEnv({"set": [["device.storage.enabled", true],
                                     //to ignore app scope check.
                                    ["dom.ignore_webidl_scope_checks", true]]}, function() {
   SpecialPowers.pushPermissions(
-    [{'type': 'filesystemprovider', 'allow': true, 'context': document}], runTest);
+    [{"type": "filesystemprovider", "allow": true, "context": document}], runTest);
 });
 
  </script>

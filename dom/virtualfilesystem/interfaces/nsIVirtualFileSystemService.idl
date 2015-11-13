@@ -14,7 +14,7 @@ interface nsIVirtualFileSystemUnmountRequestedOptions;
 /**
  * A service used by FileSystemProvider to manage all cloud storages.
  */
-[scriptable, uuid(75d68ad9-5a27-4adc-887b-3c6ffef319e9)]
+[scriptable, uuid(46c327d3-355d-4e86-b85d-d69e8d3ce994)]
 interface nsIVirtualFileSystemService : nsISupports
 {
   // Create cloud storage with the specified name.
