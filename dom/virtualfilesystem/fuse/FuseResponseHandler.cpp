@@ -45,6 +45,7 @@ NS_IMETHODIMP
 FuseResponseHandler::OnSuccess(const uint32_t aRequestId,
                                nsIVirtualFileSystemRequestValue* aValue)
 {
+  LOG("FuseResponseHandler::OnSuccess");
   MOZ_ASSERT(mHandler);
   RefPtr<FuseSuccessRunnable> runnable =
                           new FuseSuccessRunnable(mHandler, aRequestId, aValue);
@@ -129,7 +130,7 @@ FuseResponseHandler::FuseSuccessRunnable::HandleLookup()
 
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   nsString path = mHandler->GetPathByNodeId(hdr->nodeid);
 
@@ -149,12 +150,12 @@ FuseResponseHandler::FuseSuccessRunnable::HandleLookup()
 
   struct fuse_entry_out out;
   out.attr = CreateAttrByMetadata(data);
-  out.attr.ino = hdr->nodeid;
+  out.attr.ino = childnodeid;
   out.nodeid = childnodeid;
+  out.generation = fuse.nextGeneration++;
   out.attr_valid = 10;
   out.entry_valid = 10;
-  out.generation = fuse.nextGeneration++;
-  Response(((void*)&out), sizeof(out));
+  Response(&out, sizeof(out));
 }
 
 void
@@ -170,13 +171,13 @@ FuseResponseHandler::FuseSuccessRunnable::HandleGetAttr()
 
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   struct fuse_attr_out out;
   out.attr = CreateAttrByMetadata(data);
   out.attr.ino = hdr->nodeid;
   out.attr_valid = 10;
-  Response(((void*)&out), sizeof(out));
+  Response(&out, sizeof(out));
 }
 
 void
@@ -189,7 +190,7 @@ FuseResponseHandler::FuseSuccessRunnable::HandleOpen()
   out.fh = mRequestId;
   out.open_flags = 0;
   out.padding = 0;
-  Response(((void*)&out), sizeof(out));
+  Response(&out, sizeof(out));
 }
 
 void
@@ -203,7 +204,7 @@ FuseResponseHandler::FuseSuccessRunnable::HandleRead()
   MOZ_ASSERT(value);
   nsCString data;
   value->GetData(data);
-  Response(((void*)(data.get())), sizeof(data.get()));
+  Response((void*)(data.get()), sizeof(data.get()));
 }
 
 void
@@ -250,7 +251,7 @@ FuseResponseHandler::FuseSuccessRunnable::HandleReadDir()
   fde->namelen = name.Length();
   memcpy(fde->name, NS_ConvertUTF16toUTF8(name).get(), fde->namelen+1);
   size_t fdesize = FUSE_DIRENT_ALIGN(sizeof(struct fuse_dirent) + fde->namelen);
-  Response(((void*)fde),fdesize);
+  Response(fde, fdesize);
 }
 
 void
@@ -260,7 +261,7 @@ FuseResponseHandler::FuseSuccessRunnable::Response(void* aData, size_t aSize)
 
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   struct fuse_out_header outhdr;
   struct iovec vec[2];
@@ -273,7 +274,7 @@ FuseResponseHandler::FuseSuccessRunnable::Response(void* aData, size_t aSize)
   vec[1].iov_len = aSize;
   int res = writev(fuse.fuseFd, vec, 2);
   if (res < 0) {
-    ERR("Response to FUSE device failed. [%d]\n", errno);
+    ERR("Response to FUSE device failed. [%d] %s", errno, strerror(errno));
   }
   fuse.waitForResponse = false;
 }
@@ -284,7 +285,7 @@ FuseResponseHandler::FuseSuccessRunnable::ResponseError(uint32_t aError)
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   struct fuse_out_header outhdr;
   outhdr.len = sizeof(outhdr);
@@ -292,7 +293,7 @@ FuseResponseHandler::FuseSuccessRunnable::ResponseError(uint32_t aError)
   outhdr.unique = hdr->unique;
   int res = write(fuse.fuseFd, &outhdr, outhdr.len);
   if (res < 0) {
-    ERR("reply error to FUSE device failed. [%d]\n", errno);
+    ERR("reply error to FUSE device failed. [%d] %s", errno, strerror(errno));
   }
   fuse.waitForResponse = false;
 }
@@ -355,7 +356,7 @@ FuseResponseHandler::FuseErrorRunnable::Run()
   MOZ_ASSERT(mHandler);
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header *hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
   struct fuse_out_header outhdr;
   outhdr.len = sizeof(outhdr);
   outhdr.error = mError;

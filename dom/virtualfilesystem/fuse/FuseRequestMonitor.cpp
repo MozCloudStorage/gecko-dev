@@ -65,7 +65,7 @@ FileSystemProviderRequestRunnable::Run()
     return NS_ERROR_NOT_IMPLEMENTED;
   }
   }
-  mHandler->SetOperationByRequestId(requestId, FUSE_LOOKUP);
+  mHandler->SetOperationByRequestId(requestId, mType);
   return NS_OK;
 }
 
@@ -187,7 +187,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleRequest()
   }
 
   const struct fuse_in_header *hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
   if (hdr->len != (size_t)len) {
     ERR("malformed header: len=%zu, hdr->len=%u", (size_t)len, hdr->len);
     return false;
@@ -231,7 +231,7 @@ FuseRequestMonitor::FuseMonitorRunnable::Response(void* aData, size_t aSize)
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   struct fuse_out_header outhdr;
   struct iovec vec[2];
@@ -244,7 +244,7 @@ FuseRequestMonitor::FuseMonitorRunnable::Response(void* aData, size_t aSize)
   vec[1].iov_len = aSize;
   int res = writev(fuse.fuseFd, vec, 2);
   if (res < 0) {
-    ERR("Response to FUSE device failed. [%d]\n", errno);
+    ERR("Response to FUSE device failed. [%d] %s", errno, strerror(errno));
   }
 }
 
@@ -254,14 +254,14 @@ FuseRequestMonitor::FuseMonitorRunnable::ResponseError(int32_t aError)
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header *hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
   struct fuse_out_header outhdr;
   outhdr.len = sizeof(outhdr);
   outhdr.error = aError;
   outhdr.unique = hdr->unique;
   int res = write(fuse.fuseFd, &outhdr, outhdr.len);
   if (res < 0) {
-    ERR("reply error to FUSE device failed. [%d]\n", errno);
+    ERR("reply error to FUSE device failed. [%d] %s", errno, strerror(errno));
   }
 }
 
@@ -288,7 +288,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleInit()
   out.congestion_threshold = 32;
   out.max_write = VIRTUAL_FILE_SYSTEM_MAX_WRITE;
 
-  Response(((void*)&out), sizeof(out));
+  Response(&out, sizeof(out));
 }
 
 void
@@ -297,7 +297,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleLookup()
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   const char* name = (const char*)(fuse.requestBuffer+sizeof(fuse_in_header));
   nsString path = mHandler->GetPathByNodeId(hdr->nodeid);
@@ -335,7 +335,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleGetAttr()
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   nsString path = mHandler->GetPathByNodeId(hdr->nodeid);
 
@@ -365,7 +365,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleOpen()
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   const struct fuse_open_in* req =
         (const struct fuse_open_in*)(fuse.requestBuffer+sizeof(fuse_in_header));
@@ -455,7 +455,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleOpenDir()
   MOZ_ASSERT(!NS_IsMainThread());
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   nsString path = mHandler->GetPathByNodeId(hdr->nodeid);
 
@@ -471,7 +471,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleOpenDir()
   out.fh = (uint64_t)time(NULL);
   out.open_flags = 0;
   out.padding = 0;
-  Response(((void*)&out), sizeof(out));
+  Response(&out, sizeof(out));
 }
 
 void
@@ -481,7 +481,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleReadDir()
   MOZ_ASSERT(mHandler);
   MozFuse& fuse = mHandler->GetFuse();
   const struct fuse_in_header* hdr =
-        (const struct fuse_in_header*)((void*)fuse.requestBuffer);
+        (const struct fuse_in_header*)(fuse.requestBuffer);
 
   nsString path = mHandler->GetPathByNodeId(hdr->nodeid);
 
