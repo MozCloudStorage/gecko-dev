@@ -5,7 +5,6 @@
 
 #include "mozilla/dom/FakeVirtualFileSystemService.h"
 #include "mozilla/ModuleUtils.h"
-#include "nsIVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "nsVirtualFileSystemDataType.h"
 
@@ -20,8 +19,8 @@ using mozilla::dom::virtualfilesystem::nsVirtualFileSystemGetMetadataRequestedOp
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestedOptions;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemReadFileRequestedOptions;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemUnmountRequestedOptions;
-using mozilla::dom::FakeVirtualFileSystemService;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemRequestManager;
+using mozilla::dom::FakeVirtualFileSystemService;
 
 #ifdef MOZ_WIDGET_GONK
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemService;

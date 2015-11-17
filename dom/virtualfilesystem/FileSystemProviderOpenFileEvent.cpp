@@ -24,24 +24,21 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(OpenFileRequestedOptions,
                                                 FileSystemProviderRequestedOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
+NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(OpenFileRequestedOptions,
+                                               FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRACE_END
+
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(OpenFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 OpenFileRequestedOptions::OpenFileRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  nsIVirtualFileSystemOpenFileRequestedOptions* aOptions)
   : FileSystemProviderRequestedOptions(aParent, aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemOpenFileRequestedOptions> options =
-    do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
-    return;
-  }
-
-  options->GetFilePath(mFilePath);
+  aOptions->GetFilePath(mFilePath);
   uint32_t mode;
-  options->GetMode(&mode);
+  aOptions->GetMode(&mode);
   mMode = static_cast<OpenFileMode>(mode);
 }
 
@@ -67,7 +64,8 @@ OpenFileRequestedOptions::Mode() const
 FileSystemProviderOpenFileEvent::FileSystemProviderOpenFileEvent(
   EventTarget* aOwner,
   nsIVirtualFileSystemRequestManager* aManager)
-  : FileSystemProviderEvent(aOwner, aManager)
+  : FileSystemProviderEventWrap(
+    aOwner, aManager, NS_LITERAL_STRING("openfilerequested"))
 {
 
 }
@@ -77,24 +75,6 @@ FileSystemProviderOpenFileEvent::WrapObjectInternal(JSContext* aCx,
                                                  JS::Handle<JSObject*> aGivenProto)
 {
   return FileSystemProviderOpenFileEventBinding::Wrap(aCx, this, aGivenProto);
-}
-
-OpenFileRequestedOptions*
-FileSystemProviderOpenFileEvent::Options() const
-{
-  MOZ_ASSERT(mOptions);
-
-  return static_cast<OpenFileRequestedOptions*>(mOptions.get());
-}
-
-nsresult
-FileSystemProviderOpenFileEvent::InitFileSystemProviderEvent(
-  nsIVirtualFileSystemRequestedOptions* aOptions)
-{
-  RefPtr<OpenFileRequestedOptions> options = new OpenFileRequestedOptions(mOwner, aOptions);
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("openfilerequested"),
-                                      options);
-  return NS_OK;
 }
 
 void

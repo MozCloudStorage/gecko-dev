@@ -20,14 +20,11 @@ class nsVirtualFileSystemGetMetadataRequestValue final
   : public nsIVirtualFileSystemGetMetadataRequestValue
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTVALUE
   NS_DECL_NSIVIRTUALFILESYSTEMGETMETADATAREQUESTVALUE
 
-  nsVirtualFileSystemGetMetadataRequestValue() = default;
-
-  static already_AddRefed<nsIVirtualFileSystemGetMetadataRequestValue>
-    CreateFromEntryMetadata(const EntryMetadata& aData);
+  nsVirtualFileSystemGetMetadataRequestValue(const EntryMetadata& aData);
 
 private:
   ~nsVirtualFileSystemGetMetadataRequestValue() = default;
@@ -39,14 +36,12 @@ class nsVirtualFileSystemReadDirectoryRequestValue final
   : public nsIVirtualFileSystemReadDirectoryRequestValue
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTVALUE
   NS_DECL_NSIVIRTUALFILESYSTEMREADDIRECTORYREQUESTVALUE
 
-  nsVirtualFileSystemReadDirectoryRequestValue() = default;
-
-  static already_AddRefed<nsIVirtualFileSystemReadDirectoryRequestValue>
-    CreateFromEntryMetadataArray(const nsTArray<nsCOMPtr<nsIEntryMetadata>>& aArray);
+  nsVirtualFileSystemReadDirectoryRequestValue(
+    const nsTArray<nsCOMPtr<nsIEntryMetadata>>& aArray);
 
 private:
   ~nsVirtualFileSystemReadDirectoryRequestValue() = default;
@@ -59,14 +54,11 @@ class nsVirtualFileSystemReadFileRequestValue final
   : public nsIVirtualFileSystemReadFileRequestValue
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTVALUE
   NS_DECL_NSIVIRTUALFILESYSTEMREADFILEREQUESTVALUE
 
-  nsVirtualFileSystemReadFileRequestValue() = default;
-
-  static already_AddRefed<nsIVirtualFileSystemReadFileRequestValue>
-    CreateFromArrayBuffer(const ArrayBuffer& aBuffer);
+  nsVirtualFileSystemReadFileRequestValue(const ArrayBuffer& aBuffer);
 
 private:
   ~nsVirtualFileSystemReadFileRequestValue() = default;

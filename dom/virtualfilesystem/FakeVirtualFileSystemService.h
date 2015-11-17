@@ -7,6 +7,7 @@
 #ifndef mozilla_dom_FakeVirtualFileSystemService_h
 #define mozilla_dom_FakeVirtualFileSystemService_h
 
+#include "mozilla/StaticPtr.h"
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIVirtualFileSystemService.h"
@@ -31,7 +32,7 @@ public:
 
   FakeVirtualFileSystemService() = default;
 
-  static FakeVirtualFileSystemService* GetSingleton();
+  static already_AddRefed<FakeVirtualFileSystemService> GetSingleton();
 
 private:
   class VirtualFileSystem final : public nsISupports {
@@ -99,6 +100,7 @@ private:
                        uint32_t aMode,
                        uint32_t aOpenRequestId);
 
+  static StaticRefPtr<FakeVirtualFileSystemService> sSingleton;
   nsTArray<RefPtr<VirtualFileSystem>> mVirtualFileSystems;
 };
 

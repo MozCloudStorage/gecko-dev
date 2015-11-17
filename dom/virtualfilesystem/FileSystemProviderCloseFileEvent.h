@@ -20,11 +20,11 @@ class CloseFileRequestedOptions final : public FileSystemProviderRequestedOption
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(CloseFileRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(CloseFileRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit CloseFileRequestedOptions(nsISupports* aParent,
-                                     nsIVirtualFileSystemRequestedOptions* aOptions);
+                                     nsIVirtualFileSystemCloseFileRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -36,7 +36,9 @@ private:
   uint32_t mOpenRequestId;
 };
 
-class FileSystemProviderCloseFileEvent final : public FileSystemProviderEvent
+class FileSystemProviderCloseFileEvent final
+  : public FileSystemProviderEventWrap<CloseFileRequestedOptions,
+                                       nsIVirtualFileSystemCloseFileRequestedOptions>
 {
 public:
   FileSystemProviderCloseFileEvent(EventTarget* aOwner,
@@ -44,11 +46,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  CloseFileRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

@@ -21,11 +21,11 @@ class ReadFileRequestedOptions final : public FileSystemProviderRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ReadFileRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(ReadFileRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit ReadFileRequestedOptions(nsISupports* aParent,
-                                    nsIVirtualFileSystemRequestedOptions* aOptions);
+                                    nsIVirtualFileSystemReadFileRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -43,7 +43,9 @@ private:
   uint64_t mLength;
 };
 
-class FileSystemProviderReadFileEvent final : public FileSystemProviderEvent
+class FileSystemProviderReadFileEvent final
+  : public FileSystemProviderEventWrap<ReadFileRequestedOptions,
+                                       nsIVirtualFileSystemReadFileRequestedOptions>
 {
 public:
   FileSystemProviderReadFileEvent(EventTarget* aOwner,
@@ -51,11 +53,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  ReadFileRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback(const ArrayBuffer& aData, bool aHasMore);
 

@@ -29,13 +29,13 @@ struct UnmountOptions;
 namespace mozilla {
 namespace dom {
 
+class nsFileSystemProviderEventDispatcher;
+
 class FileSystemProvider final : public DOMEventTargetHelper
                                , public nsIVirtualFileSystemCallback
-                               , public nsIFileSystemProviderEventDispatcher
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIFILESYSTEMPROVIDEREVENTDISPATCHER
   NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
 
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(FileSystemProvider, DOMEventTargetHelper)
@@ -59,10 +59,17 @@ public:
   void Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, ErrorResult& aRv);
 
 private:
+  friend class nsFileSystemProviderEventDispatcher;
+
   explicit FileSystemProvider(nsPIDOMWindow* aWindow);
   ~FileSystemProvider();
   bool Init();
+  nsresult DispatchFileSystemProviderEventInternal(
+    uint32_t aRequestId,
+    uint32_t aRequestType,
+    nsIVirtualFileSystemRequestedOptions* aOptions);
 
+  RefPtr<nsFileSystemProviderEventDispatcher> mEventDispatcher;
   nsCOMPtr<nsIVirtualFileSystemService> mVirtualFileSystemService;
   nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
   std::map<uint32_t, RefPtr<Promise>> mPendingRequestPromises;

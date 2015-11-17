@@ -20,11 +20,11 @@ class AbortRequestedOptions final : public FileSystemProviderRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(AbortRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(AbortRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit AbortRequestedOptions(nsISupports* aParent,
-                                 nsIVirtualFileSystemRequestedOptions* aOptions);
+                                 nsIVirtualFileSystemAbortRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -36,7 +36,9 @@ private:
   uint32_t mOperationRequestId;
 };
 
-class FileSystemProviderAbortEvent final : public FileSystemProviderEvent
+class FileSystemProviderAbortEvent final
+  : public FileSystemProviderEventWrap<AbortRequestedOptions,
+                                       nsIVirtualFileSystemAbortRequestedOptions>
 {
 public:
   FileSystemProviderAbortEvent(EventTarget* aOwner,
@@ -44,11 +46,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  AbortRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

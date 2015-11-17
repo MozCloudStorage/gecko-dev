@@ -25,22 +25,19 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(GetMetadataRequestedOptions,
                                                 FileSystemProviderRequestedOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
+NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(GetMetadataRequestedOptions,
+                                               FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRACE_END
+
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(GetMetadataRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 GetMetadataRequestedOptions::GetMetadataRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  nsIVirtualFileSystemGetMetadataRequestedOptions* aOptions)
   : FileSystemProviderRequestedOptions(aParent, aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestedOptions> options =
-    do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
-    return;
-  }
-
-  options->GetEntryPath(mEntryPath);
+  aOptions->GetEntryPath(mEntryPath);
 }
 
 JSObject*
@@ -59,7 +56,8 @@ GetMetadataRequestedOptions::GetEntryPath(nsAString& aPath) const
 FileSystemProviderGetMetadataEvent::FileSystemProviderGetMetadataEvent(
   EventTarget* aOwner,
   nsIVirtualFileSystemRequestManager* aManager)
-  : FileSystemProviderEvent(aOwner, aManager)
+  : FileSystemProviderEventWrap(
+    aOwner, aManager, NS_LITERAL_STRING("getmetadatarequested"))
 {
 
 }
@@ -71,29 +69,11 @@ FileSystemProviderGetMetadataEvent::WrapObjectInternal(JSContext* aCx,
   return FileSystemProviderGetMetadataEventBinding::Wrap(aCx, this, aGivenProto);
 }
 
-GetMetadataRequestedOptions*
-FileSystemProviderGetMetadataEvent::Options() const
-{
-  MOZ_ASSERT(mOptions);
-
-  return static_cast<GetMetadataRequestedOptions*>(mOptions.get());
-}
-
-nsresult
-FileSystemProviderGetMetadataEvent::InitFileSystemProviderEvent(
-  nsIVirtualFileSystemRequestedOptions* aOptions)
-{
-  RefPtr<GetMetadataRequestedOptions> options = new GetMetadataRequestedOptions(mOwner, aOptions);
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("getmetadatarequested"),
-                                      options);
-  return NS_OK;
-}
-
 void
 FileSystemProviderGetMetadataEvent::SuccessCallback(const EntryMetadata& aData)
 {
   nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestValue> value =
-    virtualfilesystem::nsVirtualFileSystemGetMetadataRequestValue::CreateFromEntryMetadata(aData);
+    new virtualfilesystem::nsVirtualFileSystemGetMetadataRequestValue(aData);
 
   FileSystemProviderEvent::OnSuccess(value, false);
 }

@@ -21,11 +21,11 @@ class OpenFileRequestedOptions : public FileSystemProviderRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(OpenFileRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(OpenFileRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit OpenFileRequestedOptions(nsISupports* aParent,
-                                    nsIVirtualFileSystemRequestedOptions* aOptions);
+                                    nsIVirtualFileSystemOpenFileRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -40,7 +40,9 @@ protected:
   OpenFileMode mMode;
 };
 
-class FileSystemProviderOpenFileEvent final : public FileSystemProviderEvent
+class FileSystemProviderOpenFileEvent final
+  : public FileSystemProviderEventWrap<OpenFileRequestedOptions,
+                                       nsIVirtualFileSystemOpenFileRequestedOptions>
 {
 public:
   FileSystemProviderOpenFileEvent(EventTarget* aOwner,
@@ -48,11 +50,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  OpenFileRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

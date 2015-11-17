@@ -24,22 +24,19 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(CloseFileRequestedOptions,
                                                 FileSystemProviderRequestedOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
+NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(CloseFileRequestedOptions,
+                                               FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRACE_END
+
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(CloseFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 CloseFileRequestedOptions::CloseFileRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  nsIVirtualFileSystemCloseFileRequestedOptions* aOptions)
   : FileSystemProviderRequestedOptions(aParent, aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemCloseFileRequestedOptions> options =
-    do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
-    return;
-  }
-
-  options->GetOpenRequestId(&mOpenRequestId);
+  aOptions->GetOpenRequestId(&mOpenRequestId);
 }
 
 JSObject*
@@ -58,7 +55,8 @@ CloseFileRequestedOptions::OpenRequestId() const
 FileSystemProviderCloseFileEvent::FileSystemProviderCloseFileEvent(
   EventTarget* aOwner,
   nsIVirtualFileSystemRequestManager* aManager)
-  : FileSystemProviderEvent(aOwner, aManager)
+  : FileSystemProviderEventWrap(
+    aOwner, aManager, NS_LITERAL_STRING("closefilerequested"))
 {
 }
 
@@ -67,24 +65,6 @@ FileSystemProviderCloseFileEvent::WrapObjectInternal(JSContext* aCx,
                                                      JS::Handle<JSObject*> aGivenProto)
 {
   return FileSystemProviderCloseFileEventBinding::Wrap(aCx, this, aGivenProto);
-}
-
-CloseFileRequestedOptions*
-FileSystemProviderCloseFileEvent::Options() const
-{
-  MOZ_ASSERT(mOptions);
-
-  return static_cast<CloseFileRequestedOptions*>(mOptions.get());
-}
-
-nsresult
-FileSystemProviderCloseFileEvent::InitFileSystemProviderEvent(
-  nsIVirtualFileSystemRequestedOptions* aOptions)
-{
-  RefPtr<CloseFileRequestedOptions> options = new CloseFileRequestedOptions(mOwner, aOptions);
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("closefilerequested"),
-                                      options);
-  return NS_OK;
 }
 
 void

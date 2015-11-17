@@ -16,26 +16,16 @@ namespace dom {
 namespace virtualfilesystem {
 
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemGetMetadataRequestValue,
+                  nsIVirtualFileSystemRequestValue,
                   nsIVirtualFileSystemGetMetadataRequestValue)
 
-/* static */ already_AddRefed<nsIVirtualFileSystemGetMetadataRequestValue>
-nsVirtualFileSystemGetMetadataRequestValue::CreateFromEntryMetadata(
+nsVirtualFileSystemGetMetadataRequestValue::nsVirtualFileSystemGetMetadataRequestValue(
   const EntryMetadata& aData)
 {
-  nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestValue> requestValue =
-    new nsVirtualFileSystemGetMetadataRequestValue();
   nsCOMPtr<nsIEntryMetadata> metadata =
     nsEntryMetadata::FromEntryMetadata(aData);
 
-  requestValue->SetMetadata(metadata);
-  return requestValue.forget();
-}
-
-NS_IMETHODIMP
-nsVirtualFileSystemGetMetadataRequestValue::SetMetadata(nsIEntryMetadata *aMetadata)
-{
-  mMetadata = aMetadata;
-  return NS_OK;
+  mMetadata = metadata;
 }
 
 NS_IMETHODIMP
@@ -57,37 +47,26 @@ nsVirtualFileSystemGetMetadataRequestValue::Concat(nsIVirtualFileSystemRequestVa
 }
 
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemReadDirectoryRequestValue,
+                  nsIVirtualFileSystemRequestValue,
                   nsIVirtualFileSystemReadDirectoryRequestValue)
 
-/* static */ already_AddRefed<nsIVirtualFileSystemReadDirectoryRequestValue>
-nsVirtualFileSystemReadDirectoryRequestValue::CreateFromEntryMetadataArray(
+nsVirtualFileSystemReadDirectoryRequestValue::nsVirtualFileSystemReadDirectoryRequestValue(
   const nsTArray<nsCOMPtr<nsIEntryMetadata>>& aArray)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestValue> requestValue =
-    new nsVirtualFileSystemReadDirectoryRequestValue();
-
   nsresult rv;
   nsCOMPtr<nsIMutableArray> entries = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
   if (NS_WARN_IF(NS_FAILED(rv))) {
-    return nullptr;
+    return;
   }
 
   for (uint32_t i = 0; i < aArray.Length(); ++i) {
     rv = entries->AppendElement(aArray[i], false);
     if (NS_WARN_IF(NS_FAILED(rv))) {
-      return nullptr;
+      return;
     }
   }
 
-  requestValue->SetEntries(entries);
-  return requestValue.forget();
-}
-
-NS_IMETHODIMP
-nsVirtualFileSystemReadDirectoryRequestValue::SetEntries(nsIArray* aEntries)
-{
-  mEntries = aEntries;
-  return NS_OK;
+  mEntries = entries;
 }
 
 NS_IMETHODIMP
@@ -145,7 +124,7 @@ nsVirtualFileSystemReadDirectoryRequestValue::Concat(nsIVirtualFileSystemRequest
   AppendElementsInArray(mergedEntries, orgEntries);
   AppendElementsInArray(mergedEntries, entries);
 
-  SetEntries(mergedEntries);
+  mEntries = mergedEntries;
   return NS_OK;
 }
 
@@ -164,27 +143,13 @@ nsVirtualFileSystemReadDirectoryRequestValue::AppendElementsInArray(
 }
 
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemReadFileRequestValue,
+                  nsIVirtualFileSystemRequestValue,
                   nsIVirtualFileSystemReadFileRequestValue)
 
-/* static */ already_AddRefed<nsIVirtualFileSystemReadFileRequestValue>
-nsVirtualFileSystemReadFileRequestValue::CreateFromArrayBuffer(
+nsVirtualFileSystemReadFileRequestValue::nsVirtualFileSystemReadFileRequestValue(
   const ArrayBuffer& aBuffer)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadFileRequestValue> requestValue =
-    new nsVirtualFileSystemReadFileRequestValue();
-  aBuffer.ComputeLengthAndData();
-  nsCString data = nsCString(reinterpret_cast<const char*>(aBuffer.Data()),
-                             aBuffer.Length());
-
-  requestValue->SetData(data);
-  return requestValue.forget();
-}
-
-NS_IMETHODIMP
-nsVirtualFileSystemReadFileRequestValue::SetData(const nsACString& aData)
-{
-  mData.Assign(aData);
-  return NS_OK;
+  mData.Assign(reinterpret_cast<const char*>(aBuffer.Data()), aBuffer.Length());
 }
 
 NS_IMETHODIMP

@@ -20,11 +20,11 @@ class GetMetadataRequestedOptions final : public FileSystemProviderRequestedOpti
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(GetMetadataRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(GetMetadataRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit GetMetadataRequestedOptions(nsISupports* aParent,
-                                       nsIVirtualFileSystemRequestedOptions* aOptions);
+                                       nsIVirtualFileSystemGetMetadataRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -36,7 +36,9 @@ private:
   nsString mEntryPath;
 };
 
-class FileSystemProviderGetMetadataEvent final : public FileSystemProviderEvent
+class FileSystemProviderGetMetadataEvent final
+  : public FileSystemProviderEventWrap<GetMetadataRequestedOptions,
+                                       nsIVirtualFileSystemGetMetadataRequestedOptions>
 {
 public:
   FileSystemProviderGetMetadataEvent(EventTarget* aOwner,
@@ -44,11 +46,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  GetMetadataRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback(const EntryMetadata& aData);
 

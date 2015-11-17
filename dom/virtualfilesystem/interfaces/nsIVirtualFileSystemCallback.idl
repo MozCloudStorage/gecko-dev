@@ -36,19 +36,19 @@ interface nsIVirtualFileSystemRequestValue : nsISupports
 [scriptable, uuid(6f227457-fd61-4bd1-b98d-86c0cdc36846)]
 interface nsIVirtualFileSystemGetMetadataRequestValue : nsIVirtualFileSystemRequestValue
 {
-  attribute nsIEntryMetadata metadata;
+  readonly attribute nsIEntryMetadata metadata;
 };
 
 [scriptable, uuid(1f942e8d-721c-47c1-ae0d-779c15c60ad8)]
 interface nsIVirtualFileSystemReadDirectoryRequestValue : nsIVirtualFileSystemRequestValue
 {
-  attribute nsIArray entries;
+  readonly attribute nsIArray entries;
 };
 
 [scriptable, uuid(d750c71b-e86a-4a29-8233-42e9ed830fc0)]
 interface nsIVirtualFileSystemReadFileRequestValue : nsIVirtualFileSystemRequestValue
 {
-  attribute ACString data;
+  readonly attribute ACString data;
 };
 
 [scriptable, uuid(94ddd4fb-8b69-4d53-b7ef-d872273ad29a)]

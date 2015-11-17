@@ -5,7 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "FakeVirtualFileSystemService.h"
-#include "mozilla/StaticPtr.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "nsCOMPtr.h"
 #include "nsComponentManagerUtils.h"
@@ -64,16 +63,18 @@ NS_IMPL_ISUPPORTS0(FakeVirtualFileSystemService::VirtualFileSystem)
 NS_IMPL_ISUPPORTS(FakeVirtualFileSystemService,
                   nsIVirtualFileSystemService)
 
-StaticRefPtr<FakeVirtualFileSystemService> sSingleton;
+StaticRefPtr<FakeVirtualFileSystemService> FakeVirtualFileSystemService::sSingleton;
 
-/* static */ FakeVirtualFileSystemService*
+/* static */ already_AddRefed<FakeVirtualFileSystemService>
 FakeVirtualFileSystemService::GetSingleton()
 {
   if (!sSingleton) {
     sSingleton = new FakeVirtualFileSystemService();
     ClearOnShutdown(&sSingleton);
   }
-  return sSingleton;
+
+  RefPtr<FakeVirtualFileSystemService> service = sSingleton.get();
+  return service.forget();
 }
 
 NS_IMETHODIMP

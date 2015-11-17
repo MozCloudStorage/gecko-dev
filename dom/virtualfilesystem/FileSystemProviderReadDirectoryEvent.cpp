@@ -26,22 +26,19 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ReadDirectoryRequestedOptions,
                                                 FileSystemProviderRequestedOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
+NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(ReadDirectoryRequestedOptions,
+                                               FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRACE_END
+
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(ReadDirectoryRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 ReadDirectoryRequestedOptions::ReadDirectoryRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  nsIVirtualFileSystemReadDirectoryRequestedOptions* aOptions)
   : FileSystemProviderRequestedOptions(aParent, aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestedOptions> options =
-    do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
-    return;
-  }
-
-  options->GetDirPath(mDirectoryPath);
+  aOptions->GetDirPath(mDirectoryPath);
 }
 
 JSObject*
@@ -60,7 +57,8 @@ ReadDirectoryRequestedOptions::GetDirectoryPath(nsAString& aPath) const
 FileSystemProviderReadDirectoryEvent::FileSystemProviderReadDirectoryEvent(
   EventTarget* aOwner,
   nsIVirtualFileSystemRequestManager* aManager)
-  : FileSystemProviderEvent(aOwner, aManager)
+  : FileSystemProviderEventWrap(
+    aOwner, aManager, NS_LITERAL_STRING("readdirectoryrequested"))
 {
 
 }
@@ -70,25 +68,6 @@ FileSystemProviderReadDirectoryEvent::WrapObjectInternal(JSContext* aCx,
                                                          JS::Handle<JSObject*> aGivenProto)
 {
   return FileSystemProviderReadDirectoryEventBinding::Wrap(aCx, this, aGivenProto);
-}
-
-ReadDirectoryRequestedOptions*
-FileSystemProviderReadDirectoryEvent::Options() const
-{
-  MOZ_ASSERT(mOptions);
-
-  return static_cast<ReadDirectoryRequestedOptions*>(mOptions.get());
-}
-
-nsresult
-FileSystemProviderReadDirectoryEvent::InitFileSystemProviderEvent(
-  nsIVirtualFileSystemRequestedOptions* aOptions)
-{
-  RefPtr<ReadDirectoryRequestedOptions> options =
-    new ReadDirectoryRequestedOptions(mOwner, aOptions);
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("readdirectoryrequested"),
-                                      options);
-  return NS_OK;
 }
 
 void
@@ -101,8 +80,7 @@ FileSystemProviderReadDirectoryEvent::SuccessCallback(const Sequence<EntryMetada
   }
 
   nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestValue> value =
-    virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue::CreateFromEntryMetadataArray(
-      entries);
+    new virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue(entries);
 
   FileSystemProviderEvent::OnSuccess(value, aHasMore);
 }

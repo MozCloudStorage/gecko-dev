@@ -24,21 +24,19 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(AbortRequestedOptions,
                                                 FileSystemProviderRequestedOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
+NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(AbortRequestedOptions,
+                                               FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRACE_END
+
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(AbortRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
-AbortRequestedOptions::AbortRequestedOptions(nsISupports* aParent,
-                                             nsIVirtualFileSystemRequestedOptions* aOptions)
+AbortRequestedOptions::AbortRequestedOptions(
+  nsISupports* aParent,
+  nsIVirtualFileSystemAbortRequestedOptions* aOptions)
   : FileSystemProviderRequestedOptions(aParent, aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemAbortRequestedOptions> options =
-    do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
-    return;
-  }
-
-  options->GetOperationRequestId(&mOperationRequestId);
+  aOptions->GetOperationRequestId(&mOperationRequestId);
 }
 
 JSObject*
@@ -54,11 +52,12 @@ AbortRequestedOptions::OperationRequestId() const
   return mOperationRequestId;
 }
 
-FileSystemProviderAbortEvent::FileSystemProviderAbortEvent(EventTarget* aOwner,
-                                                           nsIVirtualFileSystemRequestManager* aManager)
-  : FileSystemProviderEvent(aOwner, aManager)
+FileSystemProviderAbortEvent::FileSystemProviderAbortEvent(
+  EventTarget* aOwner,
+  nsIVirtualFileSystemRequestManager* aManager)
+  : FileSystemProviderEventWrap(
+    aOwner, aManager, NS_LITERAL_STRING("abortrequested"))
 {
-
 }
 
 JSObject*
@@ -66,23 +65,6 @@ FileSystemProviderAbortEvent::WrapObjectInternal(JSContext* aCx,
                                                  JS::Handle<JSObject*> aGivenProto)
 {
   return FileSystemProviderAbortEventBinding::Wrap(aCx, this, aGivenProto);
-}
-
-AbortRequestedOptions*
-FileSystemProviderAbortEvent::Options() const
-{
-  MOZ_ASSERT(mOptions);
-
-  return static_cast<AbortRequestedOptions*>(mOptions.get());
-}
-
-nsresult
-FileSystemProviderAbortEvent::InitFileSystemProviderEvent(
-  nsIVirtualFileSystemRequestedOptions* aOptions)
-{
-  RefPtr<AbortRequestedOptions> options = new AbortRequestedOptions(mOwner, aOptions);
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("abortrequested"), options);
-  return NS_OK;
 }
 
 void

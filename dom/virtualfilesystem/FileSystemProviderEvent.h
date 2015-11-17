@@ -12,10 +12,10 @@
 #include "mozilla/dom/BindingUtils.h"
 #include "mozilla/dom/Event.h"
 #include "mozilla/dom/FileSystemProviderEventBinding.h"
+#include "nsIVirtualFileSystemDataType.h"
 
 class nsIVirtualFileSystemRequestManager;
 class nsIVirtualFileSystemRequestValue;
-class nsIVirtualFileSystemRequestedOptions;
 
 namespace mozilla {
 namespace dom {
@@ -56,24 +56,64 @@ public:
                                                          Event)
 
   explicit FileSystemProviderEvent(EventTarget* aOwner,
-                                   nsIVirtualFileSystemRequestManager* aManager);
+                                   nsIVirtualFileSystemRequestManager* aManager,
+                                   const nsAString& aEventName);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
 
   virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOption) = 0;
+    nsIVirtualFileSystemRequestedOptions* aOptions) = 0;
 
   virtual void OnSuccess(nsIVirtualFileSystemRequestValue* aValue, bool aHasMore);
+
   void ErrorCallback(const FileSystemProviderError& aError);
 
 protected:
-  virtual ~FileSystemProviderEvent();
+  virtual ~FileSystemProviderEvent() = default;
   void InitFileSystemProviderEventInternal(const nsAString& aType,
                                            FileSystemProviderRequestedOptions* aOptions);
 
   nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
   RefPtr<FileSystemProviderRequestedOptions> mOptions;
+  const nsString mEventName;
+};
+
+template <class WebIDLOptions, class XPIDLOptions>
+class FileSystemProviderEventWrap : public FileSystemProviderEvent
+{
+public:
+  explicit FileSystemProviderEventWrap(EventTarget* aOwner,
+                                       nsIVirtualFileSystemRequestManager* aManager,
+                                       const nsAString& aEventName)
+    : FileSystemProviderEvent(aOwner, aManager, aEventName)
+  {}
+
+  WebIDLOptions* Options() const
+  {
+    MOZ_ASSERT(mOptions);
+
+    return static_cast<WebIDLOptions*>(mOptions.get());
+  }
+
+  nsresult InitFileSystemProviderEvent(
+    nsIVirtualFileSystemRequestedOptions* aOptions) override
+  {
+    nsCOMPtr<XPIDLOptions> opts = do_QueryInterface(aOptions);
+    if (!opts) {
+      MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+      return NS_ERROR_INVALID_ARG;
+    }
+
+    RefPtr<WebIDLOptions> options = new WebIDLOptions(mOwner, opts);
+    mOptions = options;
+    Event::InitEvent(mEventName, false, false);
+    return NS_OK;
+  }
+
+protected:
+  virtual ~FileSystemProviderEventWrap() = default;
+
 };
 
 } // namespace dom

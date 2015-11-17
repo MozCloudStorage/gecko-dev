@@ -22,11 +22,11 @@ class ReadDirectoryRequestedOptions final : public FileSystemProviderRequestedOp
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ReadDirectoryRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(ReadDirectoryRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit ReadDirectoryRequestedOptions(nsISupports* aParent,
-                                         nsIVirtualFileSystemRequestedOptions* aOptions);
+                                         nsIVirtualFileSystemReadDirectoryRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -38,7 +38,9 @@ private:
   nsString mDirectoryPath;
 };
 
-class FileSystemProviderReadDirectoryEvent final : public FileSystemProviderEvent
+class FileSystemProviderReadDirectoryEvent final
+  : public FileSystemProviderEventWrap<ReadDirectoryRequestedOptions,
+                                       nsIVirtualFileSystemReadDirectoryRequestedOptions>
 {
 public:
   FileSystemProviderReadDirectoryEvent(EventTarget* aOwner,
@@ -46,11 +48,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  ReadDirectoryRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback(const Sequence<EntryMetadata>& aEntries, bool aHasMore);
 

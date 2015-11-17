@@ -20,11 +20,11 @@ class UnmountRequestedOptions final : public FileSystemProviderRequestedOptions
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(UnmountRequestedOptions,
-                                           FileSystemProviderRequestedOptions)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(UnmountRequestedOptions,
+                                                         FileSystemProviderRequestedOptions)
 
   explicit UnmountRequestedOptions(nsISupports* aParent,
-                                   nsIVirtualFileSystemRequestedOptions* aOptions);
+                                   nsIVirtualFileSystemUnmountRequestedOptions* aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -32,7 +32,9 @@ private:
   ~UnmountRequestedOptions() = default;
 };
 
-class FileSystemProviderUnmountEvent final : public FileSystemProviderEvent
+class FileSystemProviderUnmountEvent final
+  : public FileSystemProviderEventWrap<UnmountRequestedOptions,
+                                       nsIVirtualFileSystemUnmountRequestedOptions>
 {
 public:
   FileSystemProviderUnmountEvent(EventTarget* aOwner,
@@ -40,11 +42,6 @@ public:
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
-
-  UnmountRequestedOptions* Options() const;
-
-  virtual nsresult InitFileSystemProviderEvent(
-	nsIVirtualFileSystemRequestedOptions* aOptions) override;
 
   void SuccessCallback();
 

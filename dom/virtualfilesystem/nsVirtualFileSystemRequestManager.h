@@ -7,7 +7,6 @@
 
 #include <map>
 #include <vector>
-#include "mozilla/Monitor.h"
 #include "nsCOMPtr.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
@@ -24,7 +23,8 @@ public:
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTMANAGER
 
   nsVirtualFileSystemRequestManager();
-  nsVirtualFileSystemRequestManager(nsIFileSystemProviderEventDispatcher* dispatcher);
+  explicit nsVirtualFileSystemRequestManager(
+    nsIFileSystemProviderEventDispatcher* dispatcher);
 
 private:
   class nsVirtualFileSystemRequest final : public nsISupports {
@@ -32,26 +32,22 @@ private:
     NS_DECL_ISUPPORTS
 
     explicit nsVirtualFileSystemRequest(uint32_t aRequestType,
-                                   uint32_t aRequestId,
-                                   nsIVirtualFileSystemRequestedOptions* aOption,
-                                   nsIVirtualFileSystemCallback* aCallback);
+                                        uint32_t aRequestId,
+                                        nsIVirtualFileSystemCallback* aCallback);
 
-    uint32_t mRequestType;
-    uint32_t mRequestId;
-    nsCOMPtr<nsIVirtualFileSystemRequestedOptions> mOption;
+    const uint32_t mRequestType;
+    const uint32_t mRequestId;
     nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
     bool mIsCompleted;
     nsCOMPtr<nsIVirtualFileSystemRequestValue> mValue;
 
   private:
-    virtual ~nsVirtualFileSystemRequest() = default;
-
+    ~nsVirtualFileSystemRequest() = default;
   };
 
   ~nsVirtualFileSystemRequestManager() = default;
   void DestroyRequest(uint32_t aRequestId);
 
-  Monitor mMonitor;
   typedef std::map<uint32_t, RefPtr<nsVirtualFileSystemRequest>> RequestMapType;
   RequestMapType mRequestMap;
   typedef std::vector<uint32_t> RequestIdQueueType;

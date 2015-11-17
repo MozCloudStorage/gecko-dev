@@ -5,7 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderEvent.h"
-#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
@@ -73,16 +72,13 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(FileSystemProviderEvent)
 NS_INTERFACE_MAP_END_INHERITING(Event)
 
 FileSystemProviderEvent::FileSystemProviderEvent(EventTarget* aOwner,
-                                                 nsIVirtualFileSystemRequestManager* aManager)
+                                                 nsIVirtualFileSystemRequestManager* aManager,
+                                                 const nsAString& aEventName)
   : Event(aOwner, nullptr, nullptr)
   , mRequestManager(aManager)
   , mOptions(nullptr)
+  , mEventName(aEventName)
 {
-}
-
-FileSystemProviderEvent::~FileSystemProviderEvent()
-{
-
 }
 
 JSObject*

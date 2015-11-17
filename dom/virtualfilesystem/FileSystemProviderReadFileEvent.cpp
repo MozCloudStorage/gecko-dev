@@ -25,24 +25,21 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ReadFileRequestedOptions,
                                                 FileSystemProviderRequestedOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
+NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(ReadFileRequestedOptions,
+                                               FileSystemProviderRequestedOptions)
+NS_IMPL_CYCLE_COLLECTION_TRACE_END
+
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(ReadFileRequestedOptions)
 NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 ReadFileRequestedOptions::ReadFileRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  nsIVirtualFileSystemReadFileRequestedOptions* aOptions)
   : FileSystemProviderRequestedOptions(aParent, aOptions)
 {
-  nsCOMPtr<nsIVirtualFileSystemReadFileRequestedOptions> options =
-    do_QueryInterface(aOptions);
-  if (!options) {
-    MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
-    return;
-  }
-
-  options->GetOpenRequestId(&mOpenRequestId);
-  options->GetOffset(&mOffset);
-  options->GetLength(&mLength);
+  aOptions->GetOpenRequestId(&mOpenRequestId);
+  aOptions->GetOffset(&mOffset);
+  aOptions->GetLength(&mLength);
 }
 
 JSObject*
@@ -73,7 +70,8 @@ ReadFileRequestedOptions::Length() const
 FileSystemProviderReadFileEvent::FileSystemProviderReadFileEvent(
   EventTarget* aOwner,
   nsIVirtualFileSystemRequestManager* aManager)
-  : FileSystemProviderEvent(aOwner, aManager)
+  : FileSystemProviderEventWrap(
+    aOwner, aManager, NS_LITERAL_STRING("readfilerequested"))
 {
 
 }
@@ -85,29 +83,13 @@ FileSystemProviderReadFileEvent::WrapObjectInternal(JSContext* aCx,
   return FileSystemProviderReadFileEventBinding::Wrap(aCx, this, aGivenProto);
 }
 
-ReadFileRequestedOptions*
-FileSystemProviderReadFileEvent::Options() const
-{
-  MOZ_ASSERT(mOptions);
-
-  return static_cast<ReadFileRequestedOptions*>(mOptions.get());
-}
-
-nsresult
-FileSystemProviderReadFileEvent::InitFileSystemProviderEvent(
-  nsIVirtualFileSystemRequestedOptions* aOptions)
-{
-  RefPtr<ReadFileRequestedOptions> options = new ReadFileRequestedOptions(mOwner, aOptions);
-  InitFileSystemProviderEventInternal(NS_LITERAL_STRING("readfilerequested"),
-                                      options);
-  return NS_OK;
-}
-
 void
 FileSystemProviderReadFileEvent::SuccessCallback(const ArrayBuffer& aData, bool aHasMore)
 {
+  aData.ComputeLengthAndData();
+
   nsCOMPtr<nsIVirtualFileSystemReadFileRequestValue> value =
-    virtualfilesystem::nsVirtualFileSystemReadFileRequestValue::CreateFromArrayBuffer(aData);
+    new virtualfilesystem::nsVirtualFileSystemReadFileRequestValue(aData);
 
   FileSystemProviderEvent::OnSuccess(value, aHasMore);
 }
