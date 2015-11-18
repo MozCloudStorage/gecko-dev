@@ -204,7 +204,7 @@ FuseResponseHandler::FuseSuccessRunnable::HandleRead()
   MOZ_ASSERT(value);
   nsCString data;
   value->GetData(data);
-  Response((void*)(data.get()), sizeof(data.get()));
+  Response((void*)(data.get()), data.Length());
 }
 
 void
@@ -226,7 +226,7 @@ FuseResponseHandler::FuseSuccessRunnable::HandleReadDir()
   uint32_t length;
   entries->GetLength(&length);
 
-  if (req->offset > length) {
+  if (req->offset >= length) {
     ResponseError(0);
     return;
   }

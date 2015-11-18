@@ -172,6 +172,7 @@ nsVirtualFileSystemReadFileRequestValue::CreateFromArrayBuffer(
 {
   nsCOMPtr<nsIVirtualFileSystemReadFileRequestValue> requestValue =
     new nsVirtualFileSystemReadFileRequestValue();
+  aBuffer.ComputeLengthAndData();
   nsCString data = nsCString(reinterpret_cast<const char*>(aBuffer.Data()),
                              aBuffer.Length());
 
