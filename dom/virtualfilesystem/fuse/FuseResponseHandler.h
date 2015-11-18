@@ -43,6 +43,7 @@ private:
     void HandleGetAttr();
     void HandleOpen();
     void HandleRead();
+    void HandleRelease();
     void HandleReadDir();
 
     void Response(void* aData, size_t aSize);

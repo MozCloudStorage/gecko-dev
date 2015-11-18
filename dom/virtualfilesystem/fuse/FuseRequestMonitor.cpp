@@ -203,8 +203,8 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleRequest()
     case FUSE_RELEASEDIR: { HandleReleaseDir(); break; }
     case FUSE_RELEASE:    { HandleRelease(); break; }
     case FUSE_INIT:       { HandleInit(); break; }
-    case FUSE_FORGET:     { LOG("FORGET operation"); break; }
-    case FUSE_SETATTR:    { LOG("SETATTR opertion"); break; }
+    case FUSE_FORGET:     { LOG("Forget operation"); break; }
+    case FUSE_SETATTR:    { LOG("SETATTR operation"); break; }
     case FUSE_MKNOD:      { LOG("MKNOD operation"); break; }
     case FUSE_MKDIR:      { LOG("MKDIR operation"); break; }
     case FUSE_UNLINK:     { LOG("UNLINK operation"); break; }
@@ -212,8 +212,8 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleRequest()
     case FUSE_RENAME:     { LOG("RENAME operation"); break; }
     case FUSE_WRITE:      { LOG("WRITE operation"); break; }
     case FUSE_STATFS:     { LOG("STATFS operation"); break; }
-    case FUSE_FSYNC:      { LOG("FSYNC operation"); break; }
-    case FUSE_FLUSH:      { LOG("FLUSH operation"); break; }
+    case FUSE_FSYNC:      { HandleFsync(); break; }
+    case FUSE_FLUSH:      { HandleFlush(); break; }
     case FUSE_FSYNCDIR:   { LOG("FSYNCDIR operation"); break; }
     default: {
       LOG("[%d] NOTIMPL op=%d uniq=%llx nid=%llx",
@@ -447,6 +447,7 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleRelease()
 void
 FuseRequestMonitor::FuseMonitorRunnable::HandleReleaseDir()
 {
+  ResponseError(0);
 }
 
 void
@@ -504,6 +505,18 @@ FuseRequestMonitor::FuseMonitorRunnable::HandleReadDir()
   }
 
   fuse.waitForResponse = true;
+}
+
+void
+FuseRequestMonitor::FuseMonitorRunnable::HandleFlush()
+{
+  ResponseError(0);
+}
+
+void
+FuseRequestMonitor::FuseMonitorRunnable::HandleFsync()
+{
+  ResponseError(0);
 }
 
 // FuseStopRunnable

@@ -82,6 +82,8 @@ private:
     void HandleOpenDir();
     void HandleReadDir();
     void HandleReleaseDir();
+    void HandleFlush();
+    void HandleFsync();
 
     void ResponseError(int32_t aError);
     void Response(void* aData, size_t aSize);

@@ -93,7 +93,7 @@ FuseResponseHandler::FuseSuccessRunnable::Run()
     case FUSE_OPEN: { HandleOpen(); break; }
     case FUSE_READ: { HandleRead(); break; }
     case FUSE_READDIR: { HandleReadDir(); break; }
-    case FUSE_RELEASE:   // needn't do anything
+    case FUSE_RELEASE:  { HandleRelease(); break; } // needn't do anything
     case FUSE_OPENDIR:   // already handled in monitor
     case FUSE_RELEASEDIR:// already handled in monitor
     case FUSE_FORGET:
@@ -205,6 +205,12 @@ FuseResponseHandler::FuseSuccessRunnable::HandleRead()
   nsCString data;
   value->GetData(data);
   Response((void*)(data.get()), data.Length());
+}
+
+void
+FuseResponseHandler::FuseSuccessRunnable::HandleRelease()
+{
+  ResponseError(0);
 }
 
 void
@@ -359,7 +365,35 @@ FuseResponseHandler::FuseErrorRunnable::Run()
         (const struct fuse_in_header*)(fuse.requestBuffer);
   struct fuse_out_header outhdr;
   outhdr.len = sizeof(outhdr);
-  outhdr.error = mError;
+  switch (mError) {
+    case nsIVirtualFileSystemCallback::ERROR_EXISTS: {
+      outhdr.error = -EEXIST; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_NOT_FOUND: {
+      outhdr.error = -ENOENT; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_ACCESS_DENIED: {
+      outhdr.error = -EACCES; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_TOO_MANY_OPENED: {
+      outhdr.error = -ENFILE; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_NO_MEMORY: {
+      outhdr.error = -ENOMEM; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_NO_SPACE: {
+      outhdr.error = -ENOSPC; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_NOT_A_DIRECTORY: {
+      outhdr.error = -ENOTDIR; break;
+    }
+    case nsIVirtualFileSystemCallback::ERROR_NOT_A_FILE: {
+      outhdr.error = -EISDIR; break;
+    }
+    default: {
+      outhdr.error = mError;
+    }
+  }
   outhdr.unique = hdr->unique;
   int res = write(fuse.fuseFd, &outhdr, outhdr.len);
   if (res < 0) {

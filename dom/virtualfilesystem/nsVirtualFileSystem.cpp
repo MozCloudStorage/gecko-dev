@@ -182,7 +182,6 @@ nsVirtualFileSystem::GetMetadata(const nsAString& aEntryPath,
                             uint32_t* aRequestId)
 {
   MOZ_ASSERT(NS_IsMainThread());
-  LOG("GetMetadata");
   nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestedOptions> option =
   do_CreateInstance(VIRTUAL_FILE_SYSTEM_GETMETADATA_REQUESTED_OPTIONS_CONTRACT_ID);
 
@@ -195,7 +194,6 @@ nsVirtualFileSystem::GetMetadata(const nsAString& aEntryPath,
   RefPtr<nsIVirtualFileSystemCallback> callback = new nsVirtualFileSystemCallback(this);
 
   //MOZ_ASSERT(mRequestManager);
-  LOG("Call RequestManager::CreateRequest");
   nsresult rv = mRequestManager->CreateRequest(
                              nsIVirtualFileSystemRequestManager::REQUEST_GETMETADATA,
                              option,
@@ -293,9 +291,8 @@ nsVirtualFileSystem::OnOpenFileSuccess(const uint32_t aRequestId,
                                   nsIVirtualFileSystemOpenedFileInfo* aFileInfo)
 {
   MOZ_ASSERT(mInfo);
-  RefPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo = aFileInfo;
-  fileInfo->SetOpenRequestId(aRequestId);
-  mInfo->AppendOpenedFile(fileInfo);
+  aFileInfo->SetOpenRequestId(aRequestId);
+  mInfo->AppendOpenedFile(aFileInfo);
 
   MOZ_ASSERT(mResponseHandler);
   mResponseHandler->OnSuccess(aRequestId, aValue);
