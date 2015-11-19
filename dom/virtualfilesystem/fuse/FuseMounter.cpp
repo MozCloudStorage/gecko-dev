@@ -259,7 +259,7 @@ FuseMounter::FuseMountRunnable::Run()
     return NS_ERROR_FAILURE;
   }
 
-  // Create fake volume for cloud storage
+  // Create fake volume for virtual file system
   if (NS_FAILED(NS_DispatchToMainThread(new VirtualFileSystemVolumeRequest(
                         VirtualFileSystemVolumeRequest::CREATEFAKEVOLUME,
                         mHandler->FileSystemId(),
