@@ -94,11 +94,19 @@ void
 FuseRequestMonitor::Stop()
 {
   MOZ_ASSERT(mHandler);
+  MozFuse& fuse = mHandler->GetFuse();
+  char message[16] = "monitor byebye!";
+  int res = write(fuse.stopFds[1], message, sizeof(message));
+  if (res < 0) {
+    ERR("Send stop monitor message failed.");
+  }
+/*
   RefPtr<FuseStopRunnable> runnable = new FuseStopRunnable(mHandler);
   nsresult rv = mHandler->DispatchRunnable(runnable);
   if (NS_FAILED(rv)) {
     ERR("Dispatching stop monitor job on FUSE device failed.");
   }
+*/
 }
 
 // FuseMonitorRunnable

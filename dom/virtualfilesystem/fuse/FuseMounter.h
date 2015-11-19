@@ -82,6 +82,8 @@ private:
                      const uint32_t aRequestId);
 
     nsresult Run();
+    nsresult DispatchResponse(MounterResponseRunnable::TYPE aType,
+                              const uint32_t aError);
 
   private:
     ~FuseMountRunnable() = default;
@@ -103,6 +105,8 @@ private:
                       const uint32_t aRequestId);
 
     nsresult Run();
+    nsresult DispatchResponse(MounterResponseRunnable::TYPE aType,
+                              const uint32_t aError);
 
   private:
     ~FuseUnmountRunnable() = default;

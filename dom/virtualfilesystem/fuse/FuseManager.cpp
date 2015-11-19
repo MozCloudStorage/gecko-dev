@@ -25,8 +25,16 @@ SetupFuseDevice(nsVirtualFileSystem* aVFS,
                      const uint32_t aRequestId,
                      nsIVirtualFileSystemCallback* aCallback)
 {
-  RefPtr<FuseHandler> fh =
-                      new FuseHandler(aFileSystemId, aMountPoint, aDisplayName);
+  RefPtr<FuseHandler> fh;
+  sFuseHandlerTable.Get(aFileSystemId, getter_AddRefs(fh));
+  if (fh) {
+    ERR("the corresponding FUSE device for '%s' was constructed.",
+         NS_ConvertUTF16toUTF8(aFileSystemId).get());
+    aCallback->OnError(aRequestId, nsIVirtualFileSystemCallback::ERROR_FAILED);
+    return;
+  }
+
+  fh = new FuseHandler(aFileSystemId, aMountPoint, aDisplayName);
   sFuseHandlerTable.Put(aFileSystemId, fh);
 
   RefPtr<FuseMounter> mounter = new FuseMounter(fh);
@@ -35,7 +43,6 @@ SetupFuseDevice(nsVirtualFileSystem* aVFS,
   RefPtr<FuseRequestMonitor> monitor = new FuseRequestMonitor(fh);
 
   aVFS->SetResponseHandler(responsehandler);
-
   RefPtr<nsIVirtualFileSystem> vfs = aVFS;
 
   mounter->Mount(aCallback, aRequestId);
@@ -49,7 +56,7 @@ ShotdownFuseDevice(const nsAString& aFileSystemId,
 {
   RefPtr<FuseHandler> fh;
   if(!sFuseHandlerTable.Remove(aFileSystemId,getter_AddRefs(fh))) {
-    ERR("The corresponding FUSE device '%s' does not exist.",
+    ERR("The corresponding FUSE device for '%s' does not exist.",
          NS_ConvertUTF16toUTF8(aFileSystemId).get());
     aCallback->OnError(aRequestId, nsIVirtualFileSystemCallback::ERROR_FAILED);
     return;
