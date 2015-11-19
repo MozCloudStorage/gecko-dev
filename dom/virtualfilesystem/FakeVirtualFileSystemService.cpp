@@ -170,7 +170,7 @@ FakeVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSys
 }
 
 NS_IMETHODIMP
-FakeVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aFileSystems)
+FakeVirtualFileSystemService::GetAllVirtualFileSystem(nsIArray** aFileSystems)
 {
   nsresult rv;
   nsCOMPtr<nsIMutableArray> fileSystemArray = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);

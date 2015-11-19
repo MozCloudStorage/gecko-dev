@@ -36,12 +36,13 @@ function testEvent() {
     let _requestId = 0;
     let _openRequestId = 1;
     let _offset = 0;
-    let _length = 3;
+    let _length = 5;
     let successCallback = {
       onSuccess: function(requestId, value, hasMore) {
         ok(true, "successCallback is invoked.");
         let val = value.QueryInterface(Ci.nsIVirtualFileSystemReadFileRequestValue);
-        is(val.data, "ABC", "data is correct");
+        is(hasMore, false, "hasMore must be false");
+        is(val.data, "ABCDE", "data is correct");
         resolve();
       },
       onError: function(requestId, error) {}
@@ -53,13 +54,19 @@ function testEvent() {
       is(event.options.openRequestId, _openRequestId, "open request id must be the same");
       is(event.options.offset, _offset, "offset must be the same");
       is(event.options.length, _length, "length must be the same");
-      var buf = new ArrayBuffer(_length);
+      var buf = new ArrayBuffer(3);
       var view = new Uint8Array(buf);
       // set the content to "ABC"
       view[0] = 65;
       view[1] = 66;
       view[2] = 67;
-      event.successCallback(buf, false);
+      event.successCallback(buf, true);
+      var buf1 = new ArrayBuffer(2);
+      view = new Uint8Array(buf1);
+      // set the content to "ABC"
+      view[0] = 68;
+      view[1] = 69;
+      event.successCallback(buf1, false);
     });
     navigator.fileSystemProvider.mount({fileSystemId: _fileSystemId,
                               displayName: _displayName,

@@ -164,35 +164,27 @@ nsVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSyste
 }
 
 NS_IMETHODIMP
-nsVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aCloudNames)
+nsVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aFileSystems)
 {
-  NS_ENSURE_ARG_POINTER(aCloudNames);
+  NS_ENSURE_ARG_POINTER(aFileSystems);
   MonitorAutoLock lock(mArrayMonitor);
-  *aCloudNames = nullptr;
+  *aFileSystems = nullptr;
   nsresult rv;
-  nsCOMPtr<nsIMutableArray> cloudNames =
+  nsCOMPtr<nsIMutableArray> fileSystems =
     do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  VirtualFileSystemArray::size_type numClouds = mVirtualFileSystemArray.Length();
-  VirtualFileSystemArray::index_type cloudIndex;
-  for (cloudIndex = 0; cloudIndex < numClouds; cloudIndex++) {
-    RefPtr<nsIVirtualFileSystem> vfs = mVirtualFileSystemArray[cloudIndex];
-    nsCOMPtr<nsISupportsString> isupportsString =
-      do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
+  VirtualFileSystemArray::size_type numFileSystems = mVirtualFileSystemArray.Length();
+  VirtualFileSystemArray::index_type index;
+  for (index = 0; index < numFileSystems; index++) {
+    RefPtr<nsIVirtualFileSystem> vfs = mVirtualFileSystemArray[index];
     RefPtr<nsIVirtualFileSystemInfo> info;
     rv = vfs->GetInfo(getter_AddRefs(info));
     NS_ENSURE_SUCCESS(rv, rv);
-    nsString fileSystemId;
-    rv = info->GetFileSystemId(fileSystemId);
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = isupportsString->SetData(fileSystemId);
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = cloudNames->AppendElement(isupportsString, false);
+    rv = cloudNames->AppendElement(info, false);
     NS_ENSURE_SUCCESS(rv, rv);
   }
-  cloudNames.forget(aCloudNames);
+  fileSystems.forget(aFileSystems);
   return NS_OK;
 }
 

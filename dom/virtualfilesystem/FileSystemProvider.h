@@ -13,6 +13,7 @@
 #include "nsIVirtualFileSystemCallback.h"
 #include "nsIFileSystemProviderEventDispatcher.h"
 
+class nsIVirtualFileSystemInfo;
 class nsIVirtualFileSystemRequestManager;
 class nsIVirtualFileSystemService;
 
@@ -56,7 +57,9 @@ public:
 
   already_AddRefed<Promise> Unmount(const UnmountOptions& aOptions, ErrorResult& aRv);
 
-  void Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, ErrorResult& aRv);
+  void Get(const nsAString& aFileSystemId, Nullable<FileSystemInfo>& aInfo, ErrorResult& aRv);
+
+  void GetAll(Nullable<nsTArray<FileSystemInfo>>& aRetVal, ErrorResult& aRv);
 
 private:
   friend class nsFileSystemProviderEventDispatcher;
@@ -68,6 +71,8 @@ private:
     uint32_t aRequestId,
     uint32_t aRequestType,
     nsIVirtualFileSystemRequestedOptions* aOptions);
+  void ConvertVirtualFileSystemInfo(FileSystemInfo& aRetInfo,
+                                    nsIVirtualFileSystemInfo* aInfo);
 
   RefPtr<nsFileSystemProviderEventDispatcher> mEventDispatcher;
   nsCOMPtr<nsIVirtualFileSystemService> mVirtualFileSystemService;

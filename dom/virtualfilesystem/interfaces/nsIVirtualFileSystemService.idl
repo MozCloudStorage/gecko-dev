@@ -14,7 +14,7 @@ interface nsIVirtualFileSystemUnmountRequestedOptions;
 /**
  * A service used by FileSystemProvider to manage all cloud storages.
  */
-[scriptable, uuid(46c327d3-355d-4e86-b85d-d69e8d3ce994)]
+[scriptable, uuid(04f7727c-b9e9-4e87-9525-be7aac4bf28f)]
 interface nsIVirtualFileSystemService : nsISupports
 {
   // Create cloud storage with the specified name.
@@ -29,8 +29,8 @@ interface nsIVirtualFileSystemService : nsISupports
   // Get cloud storage instance with the file system identify.
   nsIVirtualFileSystemInfo getVirtualFileSystemById(in DOMString fileSystemId);
 
-  // Get the total number of cloud storages
-  nsIArray getAllVirtualFileSystemIds();
+  // Get the total number of virtual file systems
+  nsIArray getAllVirtualFileSystem();
 
   // This is for testing.
   nsIVirtualFileSystemRequestManager getRequestManagerById(in DOMString fileSystemId);

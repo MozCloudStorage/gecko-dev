@@ -180,37 +180,36 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
 }
 
 void
-FileSystemProvider::Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, ErrorResult& aRv)
+FileSystemProvider::ConvertVirtualFileSystemInfo(FileSystemInfo& aRetInfo,
+                                                 nsIVirtualFileSystemInfo* aInfo)
 {
-  nsCOMPtr<nsIVirtualFileSystemInfo> info;
-  nsresult rv = mVirtualFileSystemService->GetVirtualFileSystemById(aFileSystemId,
-                                                                    getter_AddRefs(info));
-  if (NS_FAILED(rv)) {
-    aRv.Throw(rv);
+  if (!aInfo) {
     return;
   }
 
   nsString fileSystemId;
-  info->GetFileSystemId(fileSystemId);
+  aInfo->GetFileSystemId(fileSystemId);
   nsString displayName;
-  info->GetDisplayName(displayName);
+  aInfo->GetDisplayName(displayName);
   bool writable;
-  info->GetWritable(&writable);
+  aInfo->GetWritable(&writable);
   uint32_t openedFilesLimit;
-  info->GetOpenedFilesLimit(&openedFilesLimit);
-  nsCOMPtr<nsIArray> opendFiles;
-  info->GetOpenedFiles(getter_AddRefs(opendFiles));
+  aInfo->GetOpenedFilesLimit(&openedFilesLimit);
 
-  aInfo.mFileSystemId.Construct(fileSystemId);
-  aInfo.mDisplayName.Construct(displayName);
-  aInfo.mWritable.Construct(writable);
-  aInfo.mOpenedFilesLimit.Construct(openedFilesLimit);
+  aRetInfo.mFileSystemId.Construct(fileSystemId);
+  aRetInfo.mDisplayName.Construct(displayName);
+  aRetInfo.mWritable.Construct(writable);
+  aRetInfo.mOpenedFilesLimit.Construct(openedFilesLimit);
+
+  nsCOMPtr<nsIArray> opendFiles;
+  aInfo->GetOpenedFiles(getter_AddRefs(opendFiles));
   if (opendFiles) {
     Sequence<OpenedFile> openedFileSequence;
     uint32_t len = 0;
     opendFiles->GetLength(&len);
     for (uint32_t i = 0; i < len; i++) {
-      nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo = do_QueryElementAt(opendFiles, i);
+      nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo
+        = do_QueryElementAt(opendFiles, i);
       if (fileInfo) {
         nsString filePath;
         fileInfo->GetFilePath(filePath);
@@ -226,7 +225,52 @@ FileSystemProvider::Get(const nsAString& aFileSystemId, FileSystemInfo& aInfo, E
         openedFileSequence.AppendElement(file,  fallible);
       }
     }
-  aInfo.mOpenedFiles.Construct(openedFileSequence);
+  aRetInfo.mOpenedFiles.Construct(openedFileSequence);
+  }
+}
+
+void
+FileSystemProvider::Get(const nsAString& aFileSystemId,
+                        Nullable<FileSystemInfo>& aInfo,
+                        ErrorResult& aRv)
+{
+  aInfo.SetNull();
+
+  nsCOMPtr<nsIVirtualFileSystemInfo> info;
+  nsresult rv = mVirtualFileSystemService->GetVirtualFileSystemById(aFileSystemId,
+                                                                    getter_AddRefs(info));
+  if (NS_FAILED(rv)) {
+    aRv.Throw(rv);
+    return;
+  }
+
+  ConvertVirtualFileSystemInfo(aInfo.SetValue(), info);
+}
+
+void
+FileSystemProvider::GetAll(Nullable<nsTArray<FileSystemInfo>>& aRetVal, ErrorResult& aRv)
+{
+  aRetVal.SetNull();
+
+  nsCOMPtr<nsIArray> fileSystemArray;
+  nsresult rv = mVirtualFileSystemService->GetAllVirtualFileSystem(
+    getter_AddRefs(fileSystemArray));
+  if (NS_FAILED(rv)) {
+    aRv.Throw(rv);
+    return;
+  }
+
+  aRetVal.SetValue().TruncateLength(0);
+
+  uint32_t len = 0;
+  fileSystemArray->GetLength(&len);
+  for (uint32_t i = 0; i < len; i++) {
+    nsCOMPtr<nsIVirtualFileSystemInfo> info = do_QueryElementAt(fileSystemArray, i);
+    if (info) {
+      FileSystemInfo fileSystemInfo;
+      ConvertVirtualFileSystemInfo(fileSystemInfo, info);
+      aRetVal.SetValue().AppendElement(fileSystemInfo);
+    }
   }
 }
 
