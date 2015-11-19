@@ -164,7 +164,7 @@ nsVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSyste
 }
 
 NS_IMETHODIMP
-nsVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aFileSystems)
+nsVirtualFileSystemService::GetAllVirtualFileSystem(nsIArray** aFileSystems)
 {
   NS_ENSURE_ARG_POINTER(aFileSystems);
   MonitorAutoLock lock(mArrayMonitor);
@@ -181,7 +181,7 @@ nsVirtualFileSystemService::GetAllVirtualFileSystemIds(nsIArray** aFileSystems)
     RefPtr<nsIVirtualFileSystemInfo> info;
     rv = vfs->GetInfo(getter_AddRefs(info));
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = cloudNames->AppendElement(info, false);
+    rv = fileSystems->AppendElement(info, false);
     NS_ENSURE_SUCCESS(rv, rv);
   }
   fileSystems.forget(aFileSystems);
