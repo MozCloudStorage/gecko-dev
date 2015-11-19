@@ -73,9 +73,8 @@ VirtualFileSystemVolumeRequest::Run()
       LOG("No volumes");
     }
   } else {
-    ERR("Fail to get nsVolumeService");
+    ERR("Getting nsVolumeService failed");
   }
-
 
   return NS_OK;
 }
@@ -203,29 +202,14 @@ FuseMounter::FuseMountRunnable::Run()
 
   if (fuse.fuseFd != -1) {
     ERR("FUSE file descriptor [%d], should be -1", fuse.fuseFd);
-
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
-
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_FAILED);
     return NS_ERROR_FAILURE;
   }
 
   if (!CheckMountPoint()) {
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_NOT_EMPTY,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
-
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_NOT_EMPTY);
     return NS_ERROR_FAILURE;
   }
 
@@ -237,15 +221,9 @@ FuseMounter::FuseMountRunnable::Run()
   // Open pipe for finish the request handler thread
   res = MOZ_TEMP_FAILURE_RETRY(pipe2(stopfds, O_DIRECT));
   if (res < 0) {
-    ERR("cannot open stop channel for fuse device. %s", strerror(errno));
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
+    ERR("Opening stop channel for FUSE device failed. %s", strerror(errno));
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_FAILED);
     return NS_ERROR_FAILURE;
   }
 
@@ -255,15 +233,9 @@ FuseMounter::FuseMountRunnable::Run()
   // open the fuse device
   fd = MOZ_TEMP_FAILURE_RETRY(open("/dev/fuse", O_RDWR));
   if (fd < 0){
-    ERR("cannot open fuse device: %s", strerror(errno));
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
+    ERR("Opening FUSE device failed. %s", strerror(errno));
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_FAILED);
     close(stopfds[0]);
     close(stopfds[1]);
     return NS_ERROR_FAILURE;
@@ -278,18 +250,12 @@ FuseMounter::FuseMountRunnable::Run()
   res = mount("/dev/fuse", mHandler->MountPointStr(),
               "fuse", MS_NOSUID | MS_NODEV, opts);
   if (res < 0) {
-    ERR("cannot mount fuse filesystem: %s", strerror(errno));
+    ERR("Mounting FUSE device failed. %s", strerror(errno));
     close(fd);
     close(stopfds[0]);
     close(stopfds[1]);
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_FAILED);
     return NS_ERROR_FAILURE;
   }
 
@@ -304,14 +270,8 @@ FuseMounter::FuseMountRunnable::Run()
     close(fd);
     close(stopfds[0]);
     close(stopfds[1]);
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_FAILED);
     return NS_ERROR_FAILURE;
   }
 
@@ -322,16 +282,27 @@ FuseMounter::FuseMountRunnable::Run()
   fuse.nextGeneration = 0;
   fuse.token = 0;
 
+  if (NS_FAILED(DispatchResponse(MounterResponseRunnable::SUCCESS,
+                                 nsIVirtualFileSystemCallback::ERROR_FAILED))) {
+    return NS_ERROR_FAILURE;
+  }
+  return NS_OK;
+}
+
+nsresult
+FuseMounter::FuseMountRunnable::DispatchResponse(MounterResponseRunnable::TYPE aType,
+                                                 const uint32_t aError)
+{
   RefPtr<MounterResponseRunnable> runnable =
          new MounterResponseRunnable(mCallback,
                                      mRequestId,
-                                     nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                     MounterResponseRunnable::SUCCESS);
+                                     aError,
+                                     aType);
   if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-    ERR("Dispatching mounter success response to main thread failed");
+    ERR("Dispatching mounter %s response to main thread failed",
+         (aType == MounterResponseRunnable::SUCCESS) ? "success":"error");
     return NS_ERROR_FAILURE;
   }
-
   return NS_OK;
 }
 
@@ -358,16 +329,10 @@ FuseMounter::FuseUnmountRunnable::Run()
                         VirtualFileSystemVolumeRequest::REMOVEFAKEVOLUME,
                         fileSystemId,
                         mountPoint)))) {
-    ERR("Fail to dispatch remove fake volume '%s' to main thread",
+    ERR("Dispatching remove fake volume '%s' job to main thread failed",
         NS_ConvertUTF16toUTF8(fileSystemId).get());
-    RefPtr<MounterResponseRunnable> runnable =
-           new MounterResponseRunnable(mCallback,
-                                       mRequestId,
-                                       nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                       MounterResponseRunnable::ERROR);
-    if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-      ERR("Dispatching mounter error response to main thread failed");
-    }
+    DispatchResponse(MounterResponseRunnable::ERROR,
+                     nsIVirtualFileSystemCallback::ERROR_FAILED);
     return NS_ERROR_FAILURE;
   }
 
@@ -380,13 +345,25 @@ FuseMounter::FuseUnmountRunnable::Run()
   mHandler->GetFuse().fuseFd = -1;
   mHandler->GetFuse().stopFds[0] = -1;
   mHandler->GetFuse().stopFds[1] = -1;
+  if (NS_FAILED(DispatchResponse(MounterResponseRunnable::SUCCESS,
+                                 nsIVirtualFileSystemCallback::ERROR_FAILED))) {
+    return NS_ERROR_FAILURE;
+  }
+  return NS_OK;
+}
+
+nsresult
+FuseMounter::FuseUnmountRunnable::DispatchResponse(MounterResponseRunnable::TYPE aType,
+                                                   const uint32_t aError)
+{
   RefPtr<MounterResponseRunnable> runnable =
          new MounterResponseRunnable(mCallback,
                                      mRequestId,
-                                     nsIVirtualFileSystemCallback::ERROR_FAILED,
-                                     MounterResponseRunnable::SUCCESS);
+                                     aError,
+                                     aType);
   if (NS_FAILED(NS_DispatchToMainThread(runnable))) {
-    ERR("Dispatching mounter success response to main thread failed");
+    ERR("Dispatching mounter %s response to main thread failed",
+         (aType == MounterResponseRunnable::SUCCESS) ? "success":"error");
     return NS_ERROR_FAILURE;
   }
   return NS_OK;
