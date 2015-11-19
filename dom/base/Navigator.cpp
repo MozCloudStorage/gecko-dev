@@ -33,7 +33,6 @@
 #include "mozilla/Telemetry.h"
 #include "BatteryManager.h"
 #include "mozilla/dom/DeviceStorageAreaListener.h"
-#include "mozilla/dom/FileSystemProvider.h"
 #include "mozilla/dom/PowerManager.h"
 #include "mozilla/dom/WakeLock.h"
 #include "mozilla/dom/power/PowerManagerService.h"
@@ -221,7 +220,6 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
 #endif
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mDeviceStorageAreaListener)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPresentation)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mFileSystemProvider)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_SCRIPT_OBJECTS
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
@@ -361,10 +359,6 @@ Navigator::Invalidate()
 
   if (mDeviceStorageAreaListener) {
     mDeviceStorageAreaListener = nullptr;
-  }
-
-  if (mFileSystemProvider) {
-    mFileSystemProvider = nullptr;
   }
 }
 
@@ -2976,19 +2970,6 @@ Navigator::GetPresentation(ErrorResult& aRv)
   }
 
   return mPresentation;
-}
-
-FileSystemProvider*
-Navigator::GetFileSystemProvider(ErrorResult& aRv)
-{
-  if (!mFileSystemProvider) {
-    if (!mWindow || !mWindow->GetOuterWindow() || !mWindow->GetDocShell()) {
-      aRv.Throw(NS_ERROR_FAILURE);
-      return nullptr;
-    }
-    mFileSystemProvider = FileSystemProvider::Create(mWindow);
-  }
-  return mFileSystemProvider;
 }
 
 } // namespace dom

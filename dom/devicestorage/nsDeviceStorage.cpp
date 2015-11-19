@@ -2767,12 +2767,11 @@ nsDOMDeviceStorage::GetOrderedVolumeNames(
   nsDOMDeviceStorage::VolumeNameArray& aVolumeNames)
 {
   MOZ_ASSERT(NS_IsMainThread());
-/*
+
   if (sVolumeNameCache && sVolumeNameCache->Length() > 0) {
     aVolumeNames.AppendElements(*sVolumeNameCache);
     return;
   }
-*/
 #ifdef MOZ_WIDGET_GONK
   nsCOMPtr<nsIVolumeService> vs = do_GetService(NS_VOLUMESERVICE_CONTRACTID);
   if (vs) {
