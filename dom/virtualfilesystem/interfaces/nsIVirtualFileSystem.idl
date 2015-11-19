@@ -1,0 +1,39 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+
+interface nsIVirtualFileSystemInfo;
+interface nsIVirtualFileSystemOpenedFileInfo;
+interface nsIVirtualFileSystemRequestValue;
+
+/**
+ * XPCOM component which provides file system implementation.
+ * Create and forward requests between providers and clients.
+ */
+[scriptable, uuid(aedc71ab-cb17-40dd-a2ee-09a2b47e4011)]
+interface nsIVirtualFileSystem : nsISupports
+{
+  readonly attribute nsIVirtualFileSystemInfo info;
+
+  unsigned long abort(in unsigned long aOperationId);
+  unsigned long openFile(in DOMString aPath, in unsigned short aMode);
+  unsigned long closeFile(in unsigned long aOpenFileId);
+  unsigned long getMetadata(in DOMString aEntryPath);
+  unsigned long readDirectory(in DOMString aDirPath);
+  unsigned long readFile(in unsigned long aOpenFileId,
+                         in unsigned long long aOffset,
+                         in unsigned long long aLength);
+  unsigned long unmount();
+
+  void onRequestSuccess(in unsigned long aRequestId,
+                        in nsIVirtualFileSystemRequestValue aValue);
+  void onOpenFileSuccess(in unsigned long aRequestId,
+                         in nsIVirtualFileSystemRequestValue aValue,
+                         in nsIVirtualFileSystemOpenedFileInfo aFileInfo);
+  void onCloseFileSuccess(in unsigned long aRequestId,
+                          in nsIVirtualFileSystemRequestValue aValue,
+                          in unsigned long aOpenedFileId);
+  void onRequestError(in unsigned long aRequestId, in unsigned long aError);
+};

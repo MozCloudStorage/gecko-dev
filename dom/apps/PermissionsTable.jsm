@@ -518,6 +518,11 @@ this.PermissionsTable =  { geolocation: {
                              trusted: DENY_ACTION,
                              privileged: DENY_ACTION,
                              certified: ALLOW_ACTION
+                           },
+                           "filesystemprovider": {
+                             app: DENY_ACTION,
+                             privileged: DENY_ACTION,
+                             certified: ALLOW_ACTION
                            }
                          };
 
