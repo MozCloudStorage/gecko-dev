@@ -133,7 +133,7 @@ nsVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountRequestedOptions*
 
   RefPtr<nsIVirtualFileSystem> vfs = FindVirtualFileSystemById(fileSystemId);
   if (vfs == nullptr) {
-    ERR("The cloud storgae '%s' does not exist.",
+    ERR("The file system '%s' does not exist.",
          NS_ConvertUTF16toUTF8(fileSystemId).get());
     aCallback->OnError(requestId, nsIVirtualFileSystemCallback::ERROR_FAILED);
     return NS_ERROR_FAILURE;
@@ -153,7 +153,7 @@ nsVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSyste
   MonitorAutoLock lock(mArrayMonitor);
   RefPtr<nsIVirtualFileSystem> vfs = FindVirtualFileSystemById(aFileSystemId);
   if (vfs == nullptr) {
-    ERR("The cloud storage '%s' does not exist.",
+    ERR("The file system '%s' does not exist.",
          NS_ConvertUTF16toUTF8(aFileSystemId).get());
     return NS_ERROR_NOT_AVAILABLE;
   }
@@ -209,13 +209,13 @@ nsVirtualFileSystemService::FindVirtualFileSystemById(const nsAString& aFileSyst
     RefPtr<nsIVirtualFileSystemInfo> info;
     nsresult rv = vfs->GetInfo(getter_AddRefs(info));
     if (NS_FAILED(rv)) {
-      ERR("Fail to get the cloud storage info");
+      ERR("Getting the file system info failed");
       return nullptr;
     }
     nsString fileSystemId;
     rv = info->GetFileSystemId(fileSystemId);
     if (NS_FAILED(rv)) {
-      ERR("Fail to get the cloud storage file system id");
+      ERR("Getting the file system id failed");
       return nullptr;
     }
     if (fileSystemId.Equals(aFileSystemId)) {
