@@ -145,10 +145,10 @@ nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
   mRequestMap[mRequestId] = request;
   mRequestIdQueue.push_back(mRequestId);
   aOptions->SetRequestId(mRequestId);
-  nsCOMPtr<nsIRunnable> dispatchTask = new DispatchRequestTask(mRequestId,
-                                                               aRequestType,
-                                                               aOptions,
-                                                               mDispatcher);
+  RefPtr<DispatchRequestTask> dispatchTask = new DispatchRequestTask(mRequestId,
+                                                                     aRequestType,
+                                                                     aOptions,
+                                                                     mDispatcher);
 
   nsresult rv = NS_DispatchToCurrentThread(dispatchTask);
   if (NS_FAILED(rv)) {
@@ -197,10 +197,11 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
     if (!req->mIsCompleted) {
       break;
     }
-    nsCOMPtr<nsIRunnable> callback = new RunVirtualFileSystemSuccessCallback(req->mCallback,
-                                                                             req->mRequestId,
-                                                                             req->mValue,
-                                                                             false);
+    RefPtr<RunVirtualFileSystemSuccessCallback> callback =
+      new RunVirtualFileSystemSuccessCallback(req->mCallback,
+                                              req->mRequestId,
+                                              req->mValue,
+                                              false);
     NS_DispatchToCurrentThread(callback);
     mRequestMap.erase(req->mRequestId);
     mRequestIdQueue.erase(it);
@@ -219,9 +220,10 @@ nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t a
   }
 
   RefPtr<nsVirtualFileSystemRequest> request = mRequestMap[aRequestId];
-  nsCOMPtr<nsIRunnable> callback = new RunVirtualFileSystemErrorCallback(request->mCallback,
-                                                                         aRequestId,
-                                                                         aErrorCode);
+  RefPtr<RunVirtualFileSystemErrorCallback> callback =
+    new RunVirtualFileSystemErrorCallback(request->mCallback,
+                                          aRequestId,
+                                          aErrorCode);
   NS_DispatchToCurrentThread(callback);
   DestroyRequest(aRequestId);
   return NS_OK;

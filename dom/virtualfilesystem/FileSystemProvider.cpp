@@ -28,27 +28,42 @@ namespace dom {
 using virtualfilesystem::nsVirtualFileSystemMountRequestedOptions;
 using virtualfilesystem::nsVirtualFileSystemUnmountRequestedOptions;
 
-class nsFileSystemProviderEventDispatcher final
-  : public nsIFileSystemProviderEventDispatcher
+class nsFileSystemProviderProxy : public nsISupports
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_THREADSAFE_ISUPPORTS
+
+  explicit nsFileSystemProviderProxy(FileSystemProvider* aProvider)
+    : mFileSystemProvider(aProvider) {}
+  void Forget() { mFileSystemProvider = nullptr; }
+
+protected:
+  virtual ~nsFileSystemProviderProxy() = default;
+
+  FileSystemProvider* MOZ_NON_OWNING_REF mFileSystemProvider;
+};
+
+NS_IMPL_ISUPPORTS0(nsFileSystemProviderProxy)
+
+class nsFileSystemProviderEventDispatcher final
+  : public nsFileSystemProviderProxy
+  , public nsIFileSystemProviderEventDispatcher
+{
+public:
+  NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIFILESYSTEMPROVIDEREVENTDISPATCHER
 
   explicit nsFileSystemProviderEventDispatcher(FileSystemProvider* aProvider)
-    : mFileSystemProvider(aProvider) {}
-  void Forget() { mFileSystemProvider = nullptr; }
+    : nsFileSystemProviderProxy(aProvider) {}
 
 private:
   ~nsFileSystemProviderEventDispatcher() = default;
 
-  // This reference is non-owning and it's cleared by
-  // FileSystemProvider's destructor.
-  FileSystemProvider* MOZ_NON_OWNING_REF mFileSystemProvider;
 };
 
-NS_IMPL_ISUPPORTS(nsFileSystemProviderEventDispatcher,
-                  nsIFileSystemProviderEventDispatcher)
+NS_IMPL_ISUPPORTS_INHERITED(nsFileSystemProviderEventDispatcher,
+                            nsFileSystemProviderProxy,
+                            nsIFileSystemProviderEventDispatcher)
 
 NS_IMETHODIMP
 nsFileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
@@ -60,6 +75,73 @@ nsFileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
     aRequestId,
     aRequestType,
     aOptions);
+}
+
+class MountUnmountResultCallback final : public nsFileSystemProviderProxy
+                                       , public nsIVirtualFileSystemCallback
+{
+public:
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
+
+  explicit MountUnmountResultCallback(FileSystemProvider* aProvider)
+    : nsFileSystemProviderProxy(aProvider) {}
+
+private:
+  ~MountUnmountResultCallback() = default;
+};
+
+NS_IMPL_ISUPPORTS_INHERITED(MountUnmountResultCallback,
+                            nsFileSystemProviderProxy,
+                            nsIVirtualFileSystemCallback)
+
+NS_IMETHODIMP
+MountUnmountResultCallback::OnSuccess(uint32_t aRequestId,
+                                      nsIVirtualFileSystemRequestValue* aValue,
+                                      bool aHasMore)
+{
+  Unused << aValue;
+  Unused << aHasMore;
+
+  if (!mFileSystemProvider) {
+    return NS_ERROR_NOT_INITIALIZED;
+  }
+
+  if (!NS_IsMainThread()) {
+    RefPtr<MountUnmountResultCallback> self = this;
+    nsCOMPtr<nsIRunnable> r = NS_NewRunnableFunction([self, aRequestId] () -> void
+    {
+      self->OnSuccess(aRequestId, nullptr, false);
+    });
+    return NS_DispatchToMainThread(r);
+  }
+
+  mFileSystemProvider->NotifyMountUnmountResult(aRequestId, true);
+  Forget();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+MountUnmountResultCallback::OnError(uint32_t aRequestId, uint32_t aErrorCode)
+{
+  Unused << aErrorCode;
+
+  if (!mFileSystemProvider) {
+    return NS_ERROR_NOT_INITIALIZED;
+  }
+
+  if (!NS_IsMainThread()) {
+    RefPtr<MountUnmountResultCallback> self = this;
+    nsCOMPtr<nsIRunnable> r = NS_NewRunnableFunction([self, aRequestId] () -> void
+    {
+      self->OnError(aRequestId, false);
+    });
+    return NS_DispatchToMainThread(r);
+  }
+
+  mFileSystemProvider->NotifyMountUnmountResult(aRequestId, false);
+  Forget();
+  return NS_OK;
 }
 
 static uint32_t sRequestId = 0;
@@ -78,7 +160,6 @@ NS_IMPL_ADDREF_INHERITED(FileSystemProvider, DOMEventTargetHelper)
 NS_IMPL_RELEASE_INHERITED(FileSystemProvider, DOMEventTargetHelper)
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(FileSystemProvider)
-  NS_INTERFACE_MAP_ENTRY(nsIVirtualFileSystemCallback)
 NS_INTERFACE_MAP_END_INHERITING(DOMEventTargetHelper)
 
 FileSystemProvider::FileSystemProvider(nsPIDOMWindow* aWindow)
@@ -135,12 +216,6 @@ FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
   }
   mountOptions->SetRequestId(++sRequestId);
 
-  nsresult rv = mVirtualFileSystemService->Mount(mountOptions, mRequestManager, this);
-  if (NS_FAILED(rv)) {
-    aRv.Throw(rv);
-    return nullptr;
-  }
-
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   MOZ_ASSERT(global);
 
@@ -150,6 +225,17 @@ FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
   }
 
   mPendingRequestPromises[sRequestId] = promise;
+
+  nsCOMPtr<nsIVirtualFileSystemCallback> callback =
+    new MountUnmountResultCallback(this);
+  nsresult rv = mVirtualFileSystemService->Mount(mountOptions,
+                                                 mRequestManager,
+                                                 callback);
+  if (NS_FAILED(rv)) {
+    aRv.Throw(rv);
+    return nullptr;
+  }
+
   return promise.forget();
 }
 
@@ -161,12 +247,6 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
   unmountOptions->SetFileSystemId(aOptions.mFileSystemId);
   unmountOptions->SetRequestId(++sRequestId);
 
-  nsresult rv = mVirtualFileSystemService->Unmount(unmountOptions, this);
-  if (NS_FAILED(rv)) {
-    aRv.Throw(rv);
-    return nullptr;
-  }
-
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   MOZ_ASSERT(global);
 
@@ -176,6 +256,15 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
   }
 
   mPendingRequestPromises[sRequestId] = promise;
+
+  nsCOMPtr<nsIVirtualFileSystemCallback> callback =
+    new MountUnmountResultCallback(this);
+  nsresult rv = mVirtualFileSystemService->Unmount(unmountOptions, callback);
+  if (NS_FAILED(rv)) {
+    aRv.Throw(rv);
+    return nullptr;
+  }
+
   return promise.forget();
 }
 
@@ -312,41 +401,29 @@ FileSystemProvider::DispatchFileSystemProviderEventInternal(
       return NS_ERROR_INVALID_ARG;
   }
 
-  event->InitFileSystemProviderEvent(aOptions);
+  nsresult rv = event->InitFileSystemProviderEvent(aOptions);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return rv;
+  }
+
   return DispatchTrustedEvent(event);
 }
 
-NS_IMETHODIMP
-FileSystemProvider::OnSuccess(uint32_t aRequestId,
-                              nsIVirtualFileSystemRequestValue* aValue,
-                              bool aHasMore)
+void
+FileSystemProvider::NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded)
 {
-  Unused << aValue;
-  Unused << aHasMore;
-
   auto it = mPendingRequestPromises.find(aRequestId);
   if (NS_WARN_IF(it == mPendingRequestPromises.end())) {
-    return NS_ERROR_INVALID_ARG;
+    return;
   }
 
-  it->second->MaybeResolve(JS::UndefinedHandleValue);
-  mPendingRequestPromises.erase(it);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-FileSystemProvider::OnError(uint32_t aRequestId, uint32_t aErrorCode)
-{
-  Unused << aErrorCode;
-
-  auto it = mPendingRequestPromises.find(aRequestId);
-  if (NS_WARN_IF(it == mPendingRequestPromises.end())) {
-    return NS_ERROR_INVALID_ARG;
+  if (aSucceeded) {
+    it->second->MaybeResolve(JS::UndefinedHandleValue);
   }
-
-  it->second->MaybeReject(NS_ERROR_FAILURE);
+  else {
+    it->second->MaybeReject(NS_ERROR_FAILURE);
+  }
   mPendingRequestPromises.erase(it);
-  return NS_OK;
 }
 
 } // namespace dom

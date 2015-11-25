@@ -31,14 +31,12 @@ namespace mozilla {
 namespace dom {
 
 class nsFileSystemProviderEventDispatcher;
+class MountUnmountResultCallback;
 
 class FileSystemProvider final : public DOMEventTargetHelper
-                               , public nsIVirtualFileSystemCallback
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
-
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(FileSystemProvider, DOMEventTargetHelper)
 
   IMPL_EVENT_HANDLER(unmountrequested)
@@ -63,6 +61,7 @@ public:
 
 private:
   friend class nsFileSystemProviderEventDispatcher;
+  friend class MountUnmountResultCallback;
 
   explicit FileSystemProvider(nsPIDOMWindow* aWindow);
   ~FileSystemProvider();
@@ -73,6 +72,7 @@ private:
     nsIVirtualFileSystemRequestedOptions* aOptions);
   void ConvertVirtualFileSystemInfo(FileSystemInfo& aRetInfo,
                                     nsIVirtualFileSystemInfo* aInfo);
+  void NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded);
 
   RefPtr<nsFileSystemProviderEventDispatcher> mEventDispatcher;
   nsCOMPtr<nsIVirtualFileSystemService> mVirtualFileSystemService;
