@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include "nsVirtualFileSystemRequestManager.h"
+#include "nsQueryObject.h"
 #include "nsThreadUtils.h"
 
 namespace mozilla {
@@ -68,7 +69,7 @@ public:
                                nsIFileSystemProviderEventDispatcher* aDispatcher)
     : mRequestId(aRequestId)
     , mRequestType(aRequestType)
-    , mOptions(aOptions)
+    , mOptions(do_QueryObject(aOptions))
     , mDispatcher(aDispatcher)
   {}
 
@@ -145,10 +146,10 @@ nsVirtualFileSystemRequestManager::CreateRequest(uint32_t aRequestType,
   mRequestMap[mRequestId] = request;
   mRequestIdQueue.push_back(mRequestId);
   aOptions->SetRequestId(mRequestId);
-  RefPtr<DispatchRequestTask> dispatchTask = new DispatchRequestTask(mRequestId,
-                                                                     aRequestType,
-                                                                     aOptions,
-                                                                     mDispatcher);
+  nsCOMPtr<nsIRunnable> dispatchTask = new DispatchRequestTask(mRequestId,
+                                                               aRequestType,
+                                                               aOptions,
+                                                               mDispatcher);
 
   nsresult rv = NS_DispatchToCurrentThread(dispatchTask);
   if (NS_FAILED(rv)) {
@@ -197,7 +198,7 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
     if (!req->mIsCompleted) {
       break;
     }
-    RefPtr<RunVirtualFileSystemSuccessCallback> callback =
+    nsCOMPtr<nsIRunnable> callback =
       new RunVirtualFileSystemSuccessCallback(req->mCallback,
                                               req->mRequestId,
                                               req->mValue,
@@ -220,7 +221,7 @@ nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t a
   }
 
   RefPtr<nsVirtualFileSystemRequest> request = mRequestMap[aRequestId];
-  RefPtr<RunVirtualFileSystemErrorCallback> callback =
+  nsCOMPtr<nsIRunnable> callback =
     new RunVirtualFileSystemErrorCallback(request->mCallback,
                                           aRequestId,
                                           aErrorCode);
