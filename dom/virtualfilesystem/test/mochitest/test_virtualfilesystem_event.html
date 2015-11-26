@@ -41,7 +41,10 @@ function testEvent() {
       is(event.options.fileSystemId, _fileSystemId, "file system id must be the same");
       is(event.options.requestId, _requestId, "request id must be the same");
       is(event.options.operationRequestId, _operationRequestId, "operation request id must be the same");
-      resolve();
+      fileSystemProvider.unmount({fileSystemId: _fileSystemId}).then(function() {
+          resolve();
+        }
+      );
     });
     fileSystemProvider.mount({fileSystemId: _fileSystemId,
                               displayName: _displayName,

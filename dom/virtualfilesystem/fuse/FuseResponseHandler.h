@@ -31,7 +31,6 @@ private:
   class FuseSuccessRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseSuccessRunnable)
     FuseSuccessRunnable(FuseHandler* aFuseHandler,
                         const uint32_t aRequestId,
                         nsIVirtualFileSystemRequestValue* aValue);
@@ -57,7 +56,6 @@ private:
   class FuseErrorRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseErrorRunnable)
     FuseErrorRunnable(FuseHandler* aFuseHandler,
                      const uint32_t aRequestId,
                      const uint32_t aError);

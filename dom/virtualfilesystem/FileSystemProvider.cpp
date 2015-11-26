@@ -38,7 +38,7 @@ public:
   void Forget() { mFileSystemProvider = nullptr; }
 
 protected:
-  virtual ~nsFileSystemProviderProxy() = default;
+  virtual ~nsFileSystemProviderProxy() {}
 
   FileSystemProvider* MOZ_NON_OWNING_REF mFileSystemProvider;
 };
@@ -57,7 +57,7 @@ public:
     : nsFileSystemProviderProxy(aProvider) {}
 
 private:
-  ~nsFileSystemProviderEventDispatcher() = default;
+  virtual ~nsFileSystemProviderEventDispatcher() {}
 
 };
 
@@ -88,7 +88,7 @@ public:
     : nsFileSystemProviderProxy(aProvider) {}
 
 private:
-  ~MountUnmountResultCallback() = default;
+  virtual ~MountUnmountResultCallback() {}
 };
 
 NS_IMPL_ISUPPORTS_INHERITED(MountUnmountResultCallback,

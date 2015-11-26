@@ -4,7 +4,6 @@
 
 #include "nsISupports.idl"
 
-interface nsIArray;
 interface nsIEntryMetadata;
 
 %{C++
@@ -39,10 +38,14 @@ interface nsIVirtualFileSystemGetMetadataRequestValue : nsIVirtualFileSystemRequ
   readonly attribute nsIEntryMetadata metadata;
 };
 
-[scriptable, uuid(1f942e8d-721c-47c1-ae0d-779c15c60ad8)]
+[scriptable, uuid(0e567cfb-df81-4122-a149-2dce7db5762b)]
 interface nsIVirtualFileSystemReadDirectoryRequestValue : nsIVirtualFileSystemRequestValue
 {
-  readonly attribute nsIArray entries;
+  void getEntries([optional] out unsigned long count,
+                  [retval, array, size_is(count)] out nsIEntryMetadata entries);
+
+  // This is only for testing.
+  void addEntryMetadata(in nsIEntryMetadata metadata);
 };
 
 [scriptable, uuid(d750c71b-e86a-4a29-8233-42e9ed830fc0)]
@@ -94,3 +97,20 @@ interface nsIVirtualFileSystemCallback : nsISupports
    */
   void onError(in unsigned long requestId, in unsigned long error);
 };
+
+%{C++
+#define VIRTUALFILESYSTEMGETMETADATAREQUESTVALUE_CID \
+  {0xd31b3907, 0x9544, 0x4707, {0xbd, 0x94, 0xc0, 0x94, 0xdb, 0xd5, 0x31, 0xc7}}
+#define VIRTUAL_FILE_SYSTEM_GETMETADATA_REQUEST_VALUE_CONTRACT_ID \
+  "@mozilla.org/virtualfilesystem/virtualfilesystem-getmetedata-request-value;1"
+
+#define VIRTUALFILESYSTEMREADDIRECTORYREQUESTVALUE_CID \
+  {0xc1333071, 0x3c69, 0x4fa4, {0x96, 0xdd, 0xee, 0xcb, 0xcc, 0xfe, 0xa7, 0xea}}
+#define VIRTUAL_FILE_SYSTEM_READDIRECTORY_REQUEST_VALUE_CONTRACT_ID \
+  "@mozilla.org/virtualfilesystem/virtualfilesystem-readdirectory-request-value;1"
+
+#define VIRTUALFILESYSTEMREADFILEREQUESTVALUE_CID \
+  {0x2e71d29f, 0x8206, 0x48c5, {0x8f, 0x16, 0x36, 0x16, 0x9e, 0x6a, 0x47, 0x0d}}
+#define VIRTUAL_FILE_SYSTEM_READFILE_REQUEST_VALUE_CONTRACT_ID \
+  "@mozilla.org/virtualfilesystem/virtualfilesystem-readfile-request-value;1"
+%}

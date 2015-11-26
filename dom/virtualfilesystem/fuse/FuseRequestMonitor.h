@@ -18,7 +18,6 @@ namespace virtualfilesystem {
 class FileSystemProviderRequestRunnable : public nsRunnable
 {
 public:
-  NS_INLINE_DECL_REFCOUNTING(FuseMonitorRunnable)
   FileSystemProviderRequestRunnable(FuseHandler* aHandler,
                                     nsIVirtualFileSystem* aFileSystem);
 
@@ -48,7 +47,7 @@ private:
 class FuseRequestMonitor final
 {
 public:
-  NS_INLINE_DECL_REFCOUNTING(FuseRequestMonitor)
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(FuseRequestMonitor)
 
   FuseRequestMonitor(FuseHandler* aFuseHanlder);
 
@@ -61,8 +60,6 @@ private:
   class FuseMonitorRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseMonitorRunnable)
-
     FuseMonitorRunnable(FuseHandler* aFuseHandler,
                         nsIVirtualFileSystem* aVirtualFileSystem);
 
@@ -95,8 +92,6 @@ private:
   class FuseStopRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseStopRunnable)
-
     FuseStopRunnable(FuseHandler* aFuseHandler);
 
     nsresult Run();

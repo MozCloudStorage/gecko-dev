@@ -4,11 +4,13 @@
 
 #include "mozilla/dom/FileSystemProviderGetMetadataEventBinding.h"
 #include "mozilla/dom/TypedArray.h"
+#include "mozilla/Move.h"
+#include "mozilla/mozalloc.h"
 #include "nsArrayUtils.h"
 #include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsComponentManagerUtils.h"
-#include "nsIMutableArray.h"
+#include "nsMemory.h"
 #include "nsTArray.h"
 
 namespace mozilla {
@@ -51,47 +53,37 @@ NS_IMPL_ISUPPORTS(nsVirtualFileSystemReadDirectoryRequestValue,
                   nsIVirtualFileSystemReadDirectoryRequestValue)
 
 nsVirtualFileSystemReadDirectoryRequestValue::nsVirtualFileSystemReadDirectoryRequestValue(
-  const nsTArray<nsCOMPtr<nsIEntryMetadata>>& aArray)
+  nsTArray<nsCOMPtr<nsIEntryMetadata>>&& aArray)
+  : mEntries(Move(aArray))
 {
-  nsresult rv;
-  nsCOMPtr<nsIMutableArray> entries = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return;
-  }
-
-  for (uint32_t i = 0; i < aArray.Length(); ++i) {
-    rv = entries->AppendElement(aArray[i], false);
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      return;
-    }
-  }
-
-  mEntries = entries;
 }
 
 NS_IMETHODIMP
-nsVirtualFileSystemReadDirectoryRequestValue::GetEntries(nsIArray** aEntries)
+nsVirtualFileSystemReadDirectoryRequestValue::GetEntries(uint32_t* aCount, nsIEntryMetadata*** aEntries)
 {
-  if (NS_WARN_IF(!aEntries)) {
+  if (NS_WARN_IF(!(aEntries && aEntries))) {
     return NS_ERROR_INVALID_POINTER;
   }
 
-  nsresult rv;
-  nsCOMPtr<nsIMutableArray> entries = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return rv;
+  *aCount = 0;
+  *aEntries = nullptr;
+  nsTArray<nsCOMPtr<nsIEntryMetadata>>::index_type count = mEntries.Length();
+  if (!count) {
+    return NS_OK;
   }
 
-  uint32_t length = 0;
-  mEntries->GetLength(&length);
-  for (uint32_t i = 0; i < length; i++) {
-    nsCOMPtr<nsIEntryMetadata> metadata = do_QueryElementAt(mEntries, i);
-    if (metadata) {
-      entries->AppendElement(metadata, false);
-    }
+  *aEntries =
+    static_cast<nsIEntryMetadata**>(moz_xmalloc(sizeof(nsIEntryMetadata*) * count));
+  if(NS_WARN_IF(!*aEntries)) {
+    return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  entries.forget(aEntries);
+  nsTArray<nsCOMPtr<nsIEntryMetadata>>::index_type i;
+  for (i = 0; i < count; i++) {
+    NS_ADDREF((*aEntries)[i] = mEntries[i]);
+  }
+
+  *aCount = count;
   return NS_OK;
 }
 
@@ -104,42 +96,31 @@ nsVirtualFileSystemReadDirectoryRequestValue::Concat(nsIVirtualFileSystemRequest
   }
 
   nsresult rv;
-  nsCOMPtr<nsIArray> orgEntries;
-  rv = GetEntries(getter_AddRefs(orgEntries));
-  if (NS_WARN_IF(NS_FAILED(rv))) {
+  uint32_t count;
+  nsIEntryMetadata** entries;
+  rv = value->GetEntries(&count, &entries);
+  if (NS_FAILED(rv)) {
     return rv;
   }
 
-  nsCOMPtr<nsIArray> entries;
-  rv = value->GetEntries(getter_AddRefs(entries));
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return rv;
+  for (uint32_t i = 0; i < count; i++) {
+    nsCOMPtr<nsIEntryMetadata> data = entries[i];
+    mEntries.AppendElement(data);
   }
 
-  nsCOMPtr<nsIMutableArray> mergedEntries = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return rv;
-  }
-
-  AppendElementsInArray(mergedEntries, orgEntries);
-  AppendElementsInArray(mergedEntries, entries);
-
-  mEntries = mergedEntries;
+  NS_FREE_XPCOM_ISUPPORTS_POINTER_ARRAY(count, entries);
   return NS_OK;
 }
 
-void
-nsVirtualFileSystemReadDirectoryRequestValue::AppendElementsInArray(
-  nsIMutableArray* aMergedArray, nsIArray* aToBeMergedArray)
+NS_IMETHODIMP
+nsVirtualFileSystemReadDirectoryRequestValue::AddEntryMetadata(nsIEntryMetadata* aMetaData)
 {
-  uint32_t length = 0;
-  aToBeMergedArray->GetLength(&length);
-  for (uint32_t i = 0; i < length; i++) {
-    nsCOMPtr<nsIEntryMetadata> metadata = do_QueryElementAt(aToBeMergedArray, i);
-    if (metadata) {
-      aMergedArray->AppendElement(metadata, false);
-    }
+  if (NS_WARN_IF(!aMetaData)) {
+    return NS_ERROR_INVALID_ARG;
   }
+
+  mEntries.AppendElement(aMetaData);
+  return NS_OK;
 }
 
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemReadFileRequestValue,

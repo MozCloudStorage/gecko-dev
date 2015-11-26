@@ -43,7 +43,10 @@ function testEvent() {
         let val = value.QueryInterface(Ci.nsIVirtualFileSystemReadFileRequestValue);
         is(hasMore, false, "hasMore must be false");
         is(val.data, "ABCDE", "data is correct");
-        resolve();
+        navigator.fileSystemProvider.unmount({fileSystemId: _fileSystemId}).then(function() {
+            resolve();
+          }
+        );
       },
       onError: function(requestId, error) {}
     };

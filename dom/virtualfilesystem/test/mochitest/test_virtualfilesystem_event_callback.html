@@ -39,7 +39,10 @@ function testEvent() {
       onSuccess: function(requestId, value, hasMore) {},
       onError: function(requestId, error) {
         ok(true, "errorCallback is invoked.");
-        resolve();
+        navigator.fileSystemProvider.unmount({fileSystemId: _fileSystemId}).then(function() {
+            resolve();
+          }
+        );
       }
     };
     let _fileSystemId = "dummyId";

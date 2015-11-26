@@ -5,6 +5,7 @@
 #include "FuseResponseHandler.h"
 #include "nsArrayUtils.h"
 #include "nsIVirtualFileSystemDataType.h"
+#include "nsMemory.h"
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/mount.h>
@@ -221,25 +222,24 @@ FuseResponseHandler::FuseSuccessRunnable::HandleReadDir()
                                                      do_QueryInterface(mValue);
   MOZ_ASSERT(value);
 
-  nsCOMPtr<nsIArray> entries;
-  value->GetEntries(getter_AddRefs(entries));
+  uint32_t length;
+  nsIEntryMetadata** entries;
+  if (NS_FAILED(value->GetEntries(&length, &entries))) {
+    return;
+  }
 
   MozFuse& fuse = mHandler->GetFuse();
 
   const struct fuse_read_in* req =
         (const struct fuse_read_in*)(fuse.requestBuffer+sizeof(fuse_in_header));
 
-  uint32_t length;
-  entries->GetLength(&length);
-
   if (req->offset >= length) {
     ResponseError(0);
     return;
   }
 
-  nsCOMPtr<nsIEntryMetadata> entry = do_QueryElementAt(entries, req->offset);
-
-  MOZ_ASSERT(entry);
+  nsCOMPtr<nsIEntryMetadata> entry = entries[req->offset];
+  NS_FREE_XPCOM_ISUPPORTS_POINTER_ARRAY(length, entries);
 
   char buffer[8192];
   struct fuse_dirent* fde = (struct fuse_dirent*)buffer;

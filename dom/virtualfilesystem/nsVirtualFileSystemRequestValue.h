@@ -10,7 +10,6 @@
 
 class ArrayBuffer;
 class nsIEntryMetadata;
-class nsIMutableArray;
 
 namespace mozilla {
 namespace dom {
@@ -24,7 +23,8 @@ public:
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTVALUE
   NS_DECL_NSIVIRTUALFILESYSTEMGETMETADATAREQUESTVALUE
 
-  nsVirtualFileSystemGetMetadataRequestValue(const EntryMetadata& aData);
+  nsVirtualFileSystemGetMetadataRequestValue() = default;
+  explicit nsVirtualFileSystemGetMetadataRequestValue(const EntryMetadata& aData);
 
 private:
   ~nsVirtualFileSystemGetMetadataRequestValue() = default;
@@ -40,14 +40,14 @@ public:
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTVALUE
   NS_DECL_NSIVIRTUALFILESYSTEMREADDIRECTORYREQUESTVALUE
 
-  nsVirtualFileSystemReadDirectoryRequestValue(
-    const nsTArray<nsCOMPtr<nsIEntryMetadata>>& aArray);
+  nsVirtualFileSystemReadDirectoryRequestValue() = default;
+  explicit nsVirtualFileSystemReadDirectoryRequestValue(
+    nsTArray<nsCOMPtr<nsIEntryMetadata>>&& aArray);
 
 private:
   ~nsVirtualFileSystemReadDirectoryRequestValue() = default;
-  void AppendElementsInArray(nsIMutableArray* aMergedArray, nsIArray* aToBeMergedArray);
 
-  nsCOMPtr<nsIArray> mEntries;
+  nsTArray<nsCOMPtr<nsIEntryMetadata>> mEntries;
 };
 
 class nsVirtualFileSystemReadFileRequestValue final
@@ -58,7 +58,8 @@ public:
   NS_DECL_NSIVIRTUALFILESYSTEMREQUESTVALUE
   NS_DECL_NSIVIRTUALFILESYSTEMREADFILEREQUESTVALUE
 
-  nsVirtualFileSystemReadFileRequestValue(const ArrayBuffer& aBuffer);
+  nsVirtualFileSystemReadFileRequestValue() = default;
+  explicit nsVirtualFileSystemReadFileRequestValue(const ArrayBuffer& aBuffer);
 
 private:
   ~nsVirtualFileSystemReadFileRequestValue() = default;

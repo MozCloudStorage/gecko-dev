@@ -213,7 +213,7 @@ private:
 class nsEntryMetadata final : public nsIEntryMetadata
 {
 public:
-  NS_DECL_ISUPPORTS
+  NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIENTRYMETADATA
 
   explicit nsEntryMetadata() = default;

@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderReadDirectoryEvent.h"
+#include "mozilla/Move.h"
 #include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsCOMArray.h"
@@ -80,7 +81,7 @@ FileSystemProviderReadDirectoryEvent::SuccessCallback(const Sequence<EntryMetada
   }
 
   nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestValue> value =
-    new virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue(entries);
+    new virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue(Move(entries));
 
   FileSystemProviderEvent::OnSuccess(value, aHasMore);
 }

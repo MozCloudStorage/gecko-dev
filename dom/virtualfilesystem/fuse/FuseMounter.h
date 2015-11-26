@@ -18,8 +18,6 @@ namespace virtualfilesystem {
 class VirtualFileSystemVolumeRequest final : public nsRunnable
 {
 public:
-  NS_INLINE_DECL_REFCOUNTING(VirtualFileSystemVolumeRequest)
-
   enum eRequestType {
     CREATEFAKEVOLUME = 0,
     REMOVEFAKEVOLUME = 1
@@ -38,7 +36,6 @@ private:
 class MounterResponseRunnable final : public nsRunnable
 {
 public:
-  NS_INLINE_DECL_REFCOUNTING(MountResponseRunnable);
   enum TYPE {
      SUCCESS = 0,
      ERROR = 1
@@ -62,7 +59,7 @@ private:
 class FuseMounter final
 {
 public:
-  NS_INLINE_DECL_REFCOUNTING(FuseMounter)
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(FuseMounter)
 
   FuseMounter(FuseHandler* aFuseHanlder);
   void Mount(nsIVirtualFileSystemCallback* aCallback,
@@ -75,8 +72,6 @@ private:
   class FuseMountRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseMountRunnable)
-
     FuseMountRunnable(FuseHandler* aFuseHandler,
                      nsIVirtualFileSystemCallback* aCallback,
                      const uint32_t aRequestId);
@@ -98,8 +93,6 @@ private:
   class FuseUnmountRunnable final : public nsRunnable
   {
   public:
-    NS_INLINE_DECL_REFCOUNTING(FuseUnmountRunnable)
-
     FuseUnmountRunnable(FuseHandler* aFuseHandler,
                       nsIVirtualFileSystemCallback* aCallback,
                       const uint32_t aRequestId);
