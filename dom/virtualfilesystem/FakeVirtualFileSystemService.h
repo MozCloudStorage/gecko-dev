@@ -7,34 +7,42 @@
 #ifndef mozilla_dom_FakeVirtualFileSystemService_h
 #define mozilla_dom_FakeVirtualFileSystemService_h
 
+#include "mozilla/dom/FileSystemProviderBinding.h"
 #include "mozilla/StaticPtr.h"
 #include "nsCOMPtr.h"
-#include "nsCycleCollectionParticipant.h"
-#include "nsIVirtualFileSystemService.h"
-#include "nsTArray.h"
 #include "nsString.h"
+#include "nsTArray.h"
+#include "nsThreadUtils.h"
 
-#define FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID \
-  "@mozilla.org/tv/fakevirtualfilesystemservice;1"
-#define FAKEVIRTUALFILESYSTEMSERVICE_CID \
-  { 0xb643b0d9, 0x2492, 0x49ea, { 0xbf, 0xd6, 0x51, 0xa0, 0xb7, 0x34, 0xba, 0x5b } }
-
+class nsIArray;
+class nsIVirtualFileSystemCallback;
+class nsIVirtualFileSystemInfo;
 class nsIVirtualFileSystemOpenedFileInfo;
 
 namespace mozilla {
 namespace dom {
+namespace virtualfilesystem {
 
-class FakeVirtualFileSystemService final : public nsIVirtualFileSystemService
-{
+class nsVirtualFileSystemRequestManager;
+
+class BaseVirtualFileSystemService {
 public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIVIRTUALFILESYSTEMSERVICE
+  NS_INLINE_DECL_REFCOUNTING(BaseVirtualFileSystemService);
 
-  FakeVirtualFileSystemService() = default;
+  virtual nsresult Mount(uint32_t aRequestId,
+                         const MountOptions& aOptions,
+                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         nsIVirtualFileSystemCallback* aCallback) = 0;
+  virtual nsresult Unmount(uint32_t aRequestId,
+                           const UnmountOptions& aOptions,
+                           nsIVirtualFileSystemCallback* aCallback) = 0;
+  virtual nsresult GetVirtualFileSystemById(const nsAString& aFileSystemId,
+                                            nsIVirtualFileSystemInfo** aInfo) = 0;
+  virtual nsresult GetAllVirtualFileSystem(nsIArray** aFileSystems) = 0;
 
-  static already_AddRefed<FakeVirtualFileSystemService> GetSingleton();
+protected:
+  virtual ~BaseVirtualFileSystemService() = default;
 
-private:
   class VirtualFileSystem final : public nsISupports {
   public:
     NS_DECL_ISUPPORTS
@@ -43,7 +51,7 @@ private:
                                const nsAString& aDisplayName,
                                bool aWritable,
                                uint32_t aOpenedFilesLimit,
-                               nsIVirtualFileSystemRequestManager* aRequestManager)
+                               nsVirtualFileSystemRequestManager* aRequestManager)
       : mFileSystemId(aFileSystemId)
       , mDisplayName(aDisplayName)
       , mWritable(aWritable)
@@ -72,11 +80,17 @@ private:
       return mOpenedFilesLimit;
     }
 
-    already_AddRefed<nsIVirtualFileSystemRequestManager> RequestManager() const
+    already_AddRefed<nsVirtualFileSystemRequestManager> RequestManager() const
     {
-      nsCOMPtr<nsIVirtualFileSystemRequestManager> requestManager = mRequestManager;
+      RefPtr<nsVirtualFileSystemRequestManager> requestManager = mRequestManager;
       return requestManager.forget();
     }
+
+    bool AddOpenedFile(nsIVirtualFileSystemOpenedFileInfo* aFile);
+
+    void RemoveOpenedFile(uint32_t aOpenRequestId);
+
+    already_AddRefed<nsIVirtualFileSystemInfo> ConvertToVirtualFileSystemInfo() const;
 
   private:
     ~VirtualFileSystem() = default;
@@ -85,25 +99,65 @@ private:
     nsString mDisplayName;
     bool mWritable;
     uint32_t mOpenedFilesLimit;
-    nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
+    RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
+    nsTArray<nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo>> mOpenedFiles;
   };
-
-   ~FakeVirtualFileSystemService() = default;
   struct VirtualFileSystemComparator {
-    bool Equals(const RefPtr<VirtualFileSystem>& aA, const RefPtr<VirtualFileSystem>& aB) const {
+    bool Equals(const RefPtr<VirtualFileSystem>& aA,
+                const RefPtr<VirtualFileSystem>& aB) const {
       return aA->FileSystemId() == aB->FileSystemId();
     }
   };
   bool FindVirtualFileSystemById(const nsAString& aFileSystemId, uint32_t& aIndex);
+  bool MountInternal(const MountOptions& aOptions,
+                     nsVirtualFileSystemRequestManager* aRequestManager,
+                     uint32_t* aErrorCode);
+  bool UnmountInternal(const UnmountOptions& aOptions,
+                       uint32_t* aErrorCode);
+
+  nsTArray<RefPtr<VirtualFileSystem>> mVirtualFileSystems;
+};
+
+template <class Derived>
+class BaseVirtualFileSystemServiceWrapper : public BaseVirtualFileSystemService
+{
+public:
+  static already_AddRefed<Derived> GetSingleton();
+
+protected:
+  BaseVirtualFileSystemServiceWrapper () = default;
+  virtual ~BaseVirtualFileSystemServiceWrapper() = default;
+
+  static StaticRefPtr<Derived> sSingleton;
+};
+
+class FakeVirtualFileSystemService final
+  : public BaseVirtualFileSystemServiceWrapper<FakeVirtualFileSystemService>
+{
+public:
+  virtual nsresult Mount(uint32_t aRequestId,
+                         const MountOptions& aOptions,
+                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         nsIVirtualFileSystemCallback* aCallback) override;
+  virtual nsresult Unmount(uint32_t aRequestId,
+                           const UnmountOptions& aOptions,
+                           nsIVirtualFileSystemCallback* aCallback) override;
+  virtual nsresult GetVirtualFileSystemById(const nsAString& aFileSystemId,
+                                            nsIVirtualFileSystemInfo** aInfo) override;
+  virtual nsresult GetAllVirtualFileSystem(nsIArray** aFileSystems) override;
+
+private:
+  friend class BaseVirtualFileSystemServiceWrapper<FakeVirtualFileSystemService>;
+  FakeVirtualFileSystemService() = default;
+  virtual ~FakeVirtualFileSystemService() = default;
+
   already_AddRefed<nsIVirtualFileSystemOpenedFileInfo>
     MockOpenedFileInfo(const nsAString& aFilePath,
                        uint32_t aMode,
                        uint32_t aOpenRequestId);
-
-  static StaticRefPtr<FakeVirtualFileSystemService> sSingleton;
-  nsTArray<RefPtr<VirtualFileSystem>> mVirtualFileSystems;
 };
 
+} // namespace virtualfilesystem
 } // namespace dom
 } // namespace mozilla
 

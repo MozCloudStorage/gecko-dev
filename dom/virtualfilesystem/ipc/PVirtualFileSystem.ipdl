@@ -1,0 +1,88 @@
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set sw=2 ts=8 et ft=cpp : */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+include protocol PContent;
+include protocol PVirtualFileSystemRequest;
+include "mozilla/dom/FileSystemProvider.h";
+
+using struct mozilla::dom::MountOptions from "mozilla/dom/FileSystemProviderBinding.h";
+using struct mozilla::dom::UnmountOptions from "mozilla/dom/FileSystemProviderBinding.h";
+
+namespace mozilla {
+namespace dom {
+namespace virtualfilesystem {
+
+struct VirtualFileSystemAbortRequestedOptions
+{
+  uint32_t operationRequestId;
+};
+
+struct VirtualFileSystemGetMetadataRequestedOptions
+{
+  nsString entryPath;
+};
+
+struct VirtualFileSystemCloseFileRequestedOptions
+{
+  uint32_t openRequestId;
+};
+
+struct VirtualFileSystemOpenFileRequestedOptions
+{
+  uint32_t mode;
+  nsString filePath;
+};
+
+struct VirtualFileSystemReadDirectoryRequestedOptions
+{
+  nsString directoryPath;
+};
+
+struct VirtualFileSystemReadFileRequestedOptions
+{
+  uint32_t openRequestId;
+  uint64_t length;
+  uint64_t offset;
+};
+
+struct VirtualFileSystemUnmountRequestedOptions
+{
+};
+
+union VirtualFileSystemIPCRequestedOptions
+{
+  VirtualFileSystemAbortRequestedOptions;
+  VirtualFileSystemCloseFileRequestedOptions;
+  VirtualFileSystemGetMetadataRequestedOptions;
+  VirtualFileSystemOpenFileRequestedOptions;
+  VirtualFileSystemReadDirectoryRequestedOptions;
+  VirtualFileSystemReadFileRequestedOptions;
+  VirtualFileSystemUnmountRequestedOptions;
+};
+
+sync protocol PVirtualFileSystem
+{
+  manager PContent;
+  manages PVirtualFileSystemRequest;
+
+child:
+  NotifyMountUnmountResult(uint32_t requestId, bool succeeded);
+  PVirtualFileSystemRequest(uint32_t requestId,
+                            uint32_t requestType,
+                            nsString fileSystemId,
+                            VirtualFileSystemIPCRequestedOptions options);
+
+parent:
+  __delete__();
+
+  Mount(uint32_t requestId, MountOptions options);
+  Unmount(uint32_t requestId, UnmountOptions options);
+
+};
+
+} // namespace virtualfilesystem
+} // namespace dom
+} // namespace mozilla

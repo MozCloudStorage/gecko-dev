@@ -9,6 +9,8 @@
 #include "nsIVirtualFileSystemRequestManager.h"
 #include "nsVirtualFileSystemRequestValue.h"
 
+using mozilla::dom::virtualfilesystem::VirtualFileSystemReadFileRequestedOptions;
+
 namespace mozilla {
 namespace dom {
 
@@ -34,12 +36,11 @@ NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 ReadFileRequestedOptions::ReadFileRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemReadFileRequestedOptions* aOptions)
-  : FileSystemProviderRequestedOptions(aParent, aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aRequestId, aFileSystemId, aOptions)
 {
-  aOptions->GetOpenRequestId(&mOpenRequestId);
-  aOptions->GetOffset(&mOffset);
-  aOptions->GetLength(&mLength);
 }
 
 JSObject*
@@ -52,24 +53,27 @@ ReadFileRequestedOptions::WrapObject(JSContext* aCx,
 uint32_t
 ReadFileRequestedOptions::OpenRequestId() const
 {
-  return mOpenRequestId;
+  const VirtualFileSystemReadFileRequestedOptions options = mOptions;
+  return options.openRequestId();
 }
 
 uint64_t
 ReadFileRequestedOptions::Offset() const
 {
-  return mOffset;
+  const VirtualFileSystemReadFileRequestedOptions options = mOptions;
+  return options.offset();
 }
 
 uint64_t
 ReadFileRequestedOptions::Length() const
 {
-  return mLength;
+  const VirtualFileSystemReadFileRequestedOptions options = mOptions;
+  return options.length();
 }
 
 FileSystemProviderReadFileEvent::FileSystemProviderReadFileEvent(
   EventTarget* aOwner,
-  nsIVirtualFileSystemRequestManager* aManager)
+  nsVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("readfilerequested"))
 {

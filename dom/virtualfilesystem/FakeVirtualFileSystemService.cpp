@@ -6,15 +6,15 @@
 
 #include "FakeVirtualFileSystemService.h"
 #include "mozilla/ClearOnShutdown.h"
-#include "nsCOMPtr.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIMutableArray.h"
 #include "nsIVirtualFileSystemCallback.h"
 #include "nsVirtualFileSystemDataType.h"
-#include "nsThreadUtils.h"
+#include "nsVirtualFileSystemRequestManager.h"
 
 namespace mozilla {
 namespace dom {
+namespace virtualfilesystem {
 
 class MountUnmountSuccessCallback final : public nsRunnable
 {
@@ -37,113 +37,225 @@ private:
   nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
 };
 
-class MountUnmountErrorCallback final : public nsRunnable
-{
+class MountUnmountErrorCallback final : public nsRunnable {
 public:
   explicit MountUnmountErrorCallback(uint32_t aRequestId,
-                                     nsIVirtualFileSystemCallback* aCallback)
+                                     nsIVirtualFileSystemCallback* aCallback,
+                                     uint32_t aErrorCode)
     : mRequestId(aRequestId)
     , mCallback(aCallback)
-  {
-  }
+    , mErrorCode(aErrorCode)
+  {}
 
   NS_IMETHOD Run()
   {
-    mCallback->OnError(mRequestId, 0);
+    mCallback->OnError(mRequestId, mErrorCode);
     return NS_OK;
   }
 
 private:
   uint32_t mRequestId;
   nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
+  uint32_t mErrorCode;
 };
 
-NS_IMPL_ISUPPORTS0(FakeVirtualFileSystemService::VirtualFileSystem)
+template <class Derived> StaticRefPtr<Derived>
+BaseVirtualFileSystemServiceWrapper<Derived>::sSingleton;
 
-NS_IMPL_ISUPPORTS(FakeVirtualFileSystemService,
-                  nsIVirtualFileSystemService)
-
-StaticRefPtr<FakeVirtualFileSystemService> FakeVirtualFileSystemService::sSingleton;
-
-/* static */ already_AddRefed<FakeVirtualFileSystemService>
-FakeVirtualFileSystemService::GetSingleton()
+/* static */ template <class Derived> already_AddRefed<Derived>
+BaseVirtualFileSystemServiceWrapper<Derived>::GetSingleton()
 {
   if (!sSingleton) {
-    sSingleton = new FakeVirtualFileSystemService();
+    sSingleton = new Derived();
     ClearOnShutdown(&sSingleton);
   }
 
-  RefPtr<FakeVirtualFileSystemService> service = sSingleton.get();
+  RefPtr<Derived> service = sSingleton.get();
   return service.forget();
 }
 
-NS_IMETHODIMP
-FakeVirtualFileSystemService::Mount(nsIVirtualFileSystemMountRequestedOptions* aOptions,
-                                    nsIVirtualFileSystemRequestManager* aRequestManager,
-                                    nsIVirtualFileSystemCallback* aCallback)
+namespace {
+
+struct VirtualFileSystemOpenedFileInfoComparator {
+  bool Equals(const nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo>& aA,
+              const nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo>& aB) const {
+    uint32_t idA, idB;
+    aA->GetOpenRequestId(&idA);
+    aB->GetOpenRequestId(&idB);
+    return idA == idB;
+  }
+};
+
+}
+
+NS_IMPL_ISUPPORTS0(BaseVirtualFileSystemService::VirtualFileSystem)
+
+bool
+BaseVirtualFileSystemService::FindVirtualFileSystemById(const nsAString& aFileSystemId,
+                                                      uint32_t& aIndex)
 {
-  if (NS_WARN_IF(!(aOptions && aRequestManager && aCallback))) {
-    return NS_ERROR_INVALID_ARG;
+  RefPtr<VirtualFileSystem> storage =
+    new VirtualFileSystem(aFileSystemId,
+                          /* aDisplayName */ EmptyString(),
+                          /* aWritable */ false,
+                          /* aOpenedFilesLimit */ 0,
+                          /* aRequestManager */ nullptr);
+
+  size_t index = mVirtualFileSystems.IndexOf(storage, 0, VirtualFileSystemComparator());
+  if (index == mVirtualFileSystems.NoIndex) {
+    return false;
   }
 
-  uint32_t requestId;
-  aOptions->GetRequestId(&requestId);
-  nsString fileSystemId;
-  aOptions->GetFileSystemId(fileSystemId);
+  aIndex = index;
+  return true;
+}
+
+bool
+BaseVirtualFileSystemService::VirtualFileSystem::AddOpenedFile(
+  nsIVirtualFileSystemOpenedFileInfo* aFile)
+{
+  if (NS_WARN_IF(!aFile)) {
+    return false;
+  }
+
+  uint32_t openRequestId;
+  aFile->GetOpenRequestId(&openRequestId);
+  size_t index =
+    mOpenedFiles.IndexOf(aFile, 0, VirtualFileSystemOpenedFileInfoComparator());
+  if (index == mOpenedFiles.NoIndex) {
+    return false;
+  }
+
+  mOpenedFiles.AppendElement(aFile);
+  return true;
+}
+
+void
+BaseVirtualFileSystemService::VirtualFileSystem::RemoveOpenedFile(
+  uint32_t aOpenRequestId)
+{
+  nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> openedFile =
+    new virtualfilesystem::nsVirtualFileSystemOpenedFileInfo();
+  openedFile->SetOpenRequestId(aOpenRequestId);
+  size_t index =
+    mOpenedFiles.IndexOf(openedFile, 0, VirtualFileSystemOpenedFileInfoComparator());
+  if (index != mOpenedFiles.NoIndex) {
+    mOpenedFiles.RemoveElementAt(index);
+  }
+}
+
+already_AddRefed<nsIVirtualFileSystemInfo>
+BaseVirtualFileSystemService::VirtualFileSystem::ConvertToVirtualFileSystemInfo() const
+{
+  nsCOMPtr<nsIVirtualFileSystemInfo> info = new nsVirtualFileSystemInfo();
+  info->SetFileSystemId(mFileSystemId);
+  info->SetDisplayName(mDisplayName);
+  info->SetWritable(mWritable);
+  info->SetOpenedFilesLimit(mOpenedFilesLimit);
+  for (auto it : mOpenedFiles) {
+    info->AppendOpenedFile(it);
+  }
+  return info.forget();
+}
+
+bool
+BaseVirtualFileSystemService::MountInternal(
+  const MountOptions& aOptions,
+  nsVirtualFileSystemRequestManager* aRequestManager,
+  uint32_t* aErrorCode)
+{
+  if (!aErrorCode) {
+    return false;
+  }
 
   uint32_t index;
-  if (FindVirtualFileSystemById(fileSystemId, index)) {
-    nsCOMPtr<nsIRunnable> callback = new MountUnmountErrorCallback(requestId,
-                                                                   aCallback);
-    return NS_DispatchToCurrentThread(callback);
+  if (FindVirtualFileSystemById(aOptions.mFileSystemId, index)) {
+    *aErrorCode = nsIVirtualFileSystemCallback::ERROR_EXISTS;
+    return false;
   }
 
-  nsString displayName;
-  aOptions->GetDisplayName(displayName);
-  bool writable;
-  aOptions->GetWritable(&writable);
-  uint32_t openedFilesLimit;
-  aOptions->GetOpenedFilesLimit(&openedFilesLimit);
+  bool writable = false;
+  if (aOptions.mWritable.WasPassed() && !aOptions.mWritable.Value().IsNull()) {
+    writable = aOptions.mWritable.Value().Value();
+  }
 
-  RefPtr<VirtualFileSystem> storage = new VirtualFileSystem(fileSystemId,
-                                                            displayName,
+  uint32_t openedFilesLimit = 0;
+  if (aOptions.mOpenedFilesLimit.WasPassed() &&
+      !aOptions.mOpenedFilesLimit.Value().IsNull()) {
+    openedFilesLimit = aOptions.mOpenedFilesLimit.Value().Value();
+  }
+  RefPtr<VirtualFileSystem> storage = new VirtualFileSystem(aOptions.mFileSystemId,
+                                                            aOptions.mDisplayName,
                                                             writable,
                                                             openedFilesLimit,
                                                             aRequestManager);
 
   mVirtualFileSystems.AppendElement(storage);
-  nsCOMPtr<nsIRunnable> callback = new MountUnmountSuccessCallback(requestId,
-                                                                   aCallback);
-  return NS_DispatchToCurrentThread(callback);
+  return true;
 }
 
-NS_IMETHODIMP
-FakeVirtualFileSystemService::Unmount(nsIVirtualFileSystemUnmountRequestedOptions* aOptions,
-                                      nsIVirtualFileSystemCallback* aCallback)
+bool
+BaseVirtualFileSystemService::UnmountInternal(
+  const UnmountOptions& aOptions,
+  uint32_t* aErrorCode)
 {
-  if (NS_WARN_IF(!(aOptions && aCallback))) {
-    return NS_ERROR_INVALID_ARG;
+  if (!aErrorCode) {
+    return false;
   }
 
-  uint32_t requestId;
-  aOptions->GetRequestId(&requestId);
-  nsString fileSystemId;
-  aOptions->GetFileSystemId(fileSystemId);
-
   uint32_t index;
-  if (!FindVirtualFileSystemById(fileSystemId, index)) {
-    nsCOMPtr<nsIRunnable> callback = new MountUnmountErrorCallback(requestId,
-                                                                   aCallback);
-    return NS_DispatchToCurrentThread(callback);
+  if (!FindVirtualFileSystemById(aOptions.mFileSystemId, index)) {
+    *aErrorCode = nsIVirtualFileSystemCallback::ERROR_NOT_FOUND;
+    return false;
   }
 
   mVirtualFileSystems.RemoveElementAt(index);
-  nsCOMPtr<nsIRunnable> callback = new MountUnmountSuccessCallback(requestId,
-                                                                   aCallback);
+  return true;
+}
+
+nsresult
+FakeVirtualFileSystemService::Mount(uint32_t aRequestId,
+                                    const MountOptions& aOptions,
+                                    nsVirtualFileSystemRequestManager* aRequestManager,
+                                    nsIVirtualFileSystemCallback* aCallback)
+{
+  if (NS_WARN_IF(!(aRequestManager && aCallback))) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  uint32_t errorCode;
+  if (!MountInternal(aOptions, aRequestManager, &errorCode)) {
+    aCallback->OnError(aRequestId, errorCode);
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIRunnable> callback =
+    new MountUnmountSuccessCallback(aRequestId, aCallback);
   return NS_DispatchToCurrentThread(callback);
 }
 
-NS_IMETHODIMP
+nsresult
+FakeVirtualFileSystemService::Unmount(
+  uint32_t aRequestId,
+  const UnmountOptions& aOptions,
+  nsIVirtualFileSystemCallback* aCallback)
+{
+  if (NS_WARN_IF(!aCallback)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  uint32_t errorCode;
+  if (!UnmountInternal(aOptions, &errorCode)) {
+    aCallback->OnError(aRequestId, errorCode);
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIRunnable> callback =
+    new MountUnmountSuccessCallback(aRequestId, aCallback);
+  return NS_DispatchToCurrentThread(callback);
+}
+
+nsresult
 FakeVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSystemId,
                                                        nsIVirtualFileSystemInfo** aInfo)
 {
@@ -154,22 +266,19 @@ FakeVirtualFileSystemService::GetVirtualFileSystemById(const nsAString& aFileSys
   }
 
   RefPtr<VirtualFileSystem> fileSystem = mVirtualFileSystems[index];
-  nsCOMPtr<nsIVirtualFileSystemInfo> info = new virtualfilesystem::nsVirtualFileSystemInfo();
-  info->SetFileSystemId(fileSystem->FileSystemId());
-  info->SetDisplayName(fileSystem->DisplayName());
-  info->SetWritable(fileSystem->Writable());
-  info->SetOpenedFilesLimit(fileSystem->OpenedFilesLimit());
 
   nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> mockFile =
     MockOpenedFileInfo(NS_LITERAL_STRING("/dummy/path/"),
                        nsIVirtualFileSystemOpenFileRequestedOptions::OPEN_MODE_READ,
                        1);
-  info->AppendOpenedFile(mockFile);
+  fileSystem->AddOpenedFile(mockFile);
+
+  nsCOMPtr<nsIVirtualFileSystemInfo> info = fileSystem->ConvertToVirtualFileSystemInfo();
   info.forget(aInfo);
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 FakeVirtualFileSystemService::GetAllVirtualFileSystem(nsIArray** aFileSystems)
 {
   nsresult rv;
@@ -189,22 +298,6 @@ FakeVirtualFileSystemService::GetAllVirtualFileSystem(nsIArray** aFileSystems)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-FakeVirtualFileSystemService::GetRequestManagerById(const nsAString& aFileSystemId,
-                                                    nsIVirtualFileSystemRequestManager** aManager)
-{
-  uint32_t index;
-  if (!FindVirtualFileSystemById(aFileSystemId, index)) {
-    *aManager = nullptr;
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  RefPtr<VirtualFileSystem> fileSystem = mVirtualFileSystems[index];
-  nsCOMPtr<nsIVirtualFileSystemRequestManager> manager = fileSystem->RequestManager();
-  manager.forget(aManager);
-  return NS_OK;
-}
-
 already_AddRefed<nsIVirtualFileSystemOpenedFileInfo>
 FakeVirtualFileSystemService::MockOpenedFileInfo(const nsAString& aFilePath,
                                                  uint32_t aMode,
@@ -218,24 +311,6 @@ FakeVirtualFileSystemService::MockOpenedFileInfo(const nsAString& aFilePath,
   return openedFile.forget();
 }
 
-bool
-FakeVirtualFileSystemService::FindVirtualFileSystemById(const nsAString& aFileSystemId,
-                                                        uint32_t& aIndex)
-{
-  RefPtr<VirtualFileSystem> storage = new VirtualFileSystem(aFileSystemId,
-                                                            /* aDisplayName */ EmptyString(),
-                                                            /* aWritable */ false,
-                                                            /* aOpenedFilesLimit */ 0,
-                                                            /* aRequestManager */ nullptr);
-
-  size_t index = mVirtualFileSystems.IndexOf(storage, 0, VirtualFileSystemComparator());
-  if (index == mVirtualFileSystems.NoIndex) {
-    return false;
-  }
-
-  aIndex = index;
-  return true;
-}
-
+} // namespace virtualfilesystem
 } // namespace dom
 } // namespace mozilla

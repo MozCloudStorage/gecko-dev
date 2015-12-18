@@ -6,6 +6,7 @@
 
 #include "mozilla/dom/FileSystemProviderEvent.h"
 #include "nsIVirtualFileSystemRequestManager.h"
+#include "nsVirtualFileSystemDataType.h"
 
 namespace mozilla {
 namespace dom {
@@ -22,13 +23,14 @@ NS_INTERFACE_MAP_END
 
 FileSystemProviderRequestedOptions::FileSystemProviderRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
   : mParent(aParent)
+  , mRequestId(aRequestId)
+  , mFileSystemId(aFileSystemId)
+  , mOptions(aOptions)
 {
-  if (aOptions) {
-    aOptions->GetFileSystemId(mFileSystemId);
-    aOptions->GetRequestId(&mRequestId);
-  }
 }
 
 JSObject*
@@ -72,7 +74,7 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(FileSystemProviderEvent)
 NS_INTERFACE_MAP_END_INHERITING(Event)
 
 FileSystemProviderEvent::FileSystemProviderEvent(EventTarget* aOwner,
-                                                 nsIVirtualFileSystemRequestManager* aManager,
+                                                 nsVirtualFileSystemRequestManager* aManager,
                                                  const nsAString& aEventName)
   : Event(aOwner, nullptr, nullptr)
   , mRequestManager(aManager)

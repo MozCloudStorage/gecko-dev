@@ -24,7 +24,9 @@ public:
                                                          FileSystemProviderRequestedOptions)
 
   explicit UnmountRequestedOptions(nsISupports* aParent,
-                                   nsIVirtualFileSystemUnmountRequestedOptions* aOptions);
+                                   uint32_t aRequestId,
+                                   const nsAString& aFileSystemId,
+                                   const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -33,12 +35,13 @@ private:
 };
 
 class FileSystemProviderUnmountEvent final
-  : public FileSystemProviderEventWrap<UnmountRequestedOptions,
-                                       nsIVirtualFileSystemUnmountRequestedOptions>
+  : public FileSystemProviderEventWrap<
+    UnmountRequestedOptions,
+    VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemUnmountRequestedOptions>
 {
 public:
   FileSystemProviderUnmountEvent(EventTarget* aOwner,
-                                 nsIVirtualFileSystemRequestManager* aManager);
+                                 nsVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

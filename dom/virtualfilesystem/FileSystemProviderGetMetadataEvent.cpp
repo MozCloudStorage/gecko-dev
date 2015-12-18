@@ -9,6 +9,8 @@
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
+using mozilla::dom::virtualfilesystem::VirtualFileSystemGetMetadataRequestedOptions;
+
 namespace mozilla {
 namespace dom {
 
@@ -34,10 +36,11 @@ NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 GetMetadataRequestedOptions::GetMetadataRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemGetMetadataRequestedOptions* aOptions)
-  : FileSystemProviderRequestedOptions(aParent, aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aRequestId, aFileSystemId, aOptions)
 {
-  aOptions->GetEntryPath(mEntryPath);
 }
 
 JSObject*
@@ -50,12 +53,13 @@ GetMetadataRequestedOptions::WrapObject(JSContext* aCx,
 void
 GetMetadataRequestedOptions::GetEntryPath(nsAString& aPath) const
 {
-  aPath = mEntryPath;
+  const VirtualFileSystemGetMetadataRequestedOptions options = mOptions;
+  aPath = options.entryPath();
 }
 
 FileSystemProviderGetMetadataEvent::FileSystemProviderGetMetadataEvent(
   EventTarget* aOwner,
-  nsIVirtualFileSystemRequestManager* aManager)
+  nsVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("getmetadatarequested"))
 {

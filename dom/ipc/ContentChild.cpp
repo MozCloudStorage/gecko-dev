@@ -190,6 +190,7 @@
 #include "mozilla/dom/ipc/StructuredCloneData.h"
 #include "mozilla/dom/telephony/PTelephonyChild.h"
 #include "mozilla/dom/time/DateCacheCleaner.h"
+#include "mozilla/dom/virtualfilesystem/PVirtualFileSystemChild.h"
 #include "mozilla/dom/voicemail/VoicemailIPCService.h"
 #include "mozilla/net/NeckoMessageUtils.h"
 #include "mozilla/widget/PuppetBidiKeyboard.h"
@@ -209,6 +210,7 @@ using namespace mozilla::dom::ipc;
 using namespace mozilla::dom::mobileconnection;
 using namespace mozilla::dom::mobilemessage;
 using namespace mozilla::dom::telephony;
+using namespace mozilla::dom::virtualfilesystem;
 using namespace mozilla::dom::voicemail;
 using namespace mozilla::media;
 using namespace mozilla::embedding;
@@ -1595,6 +1597,20 @@ ContentChild::AllocPPresentationChild()
 
 bool
 ContentChild::DeallocPPresentationChild(PPresentationChild* aActor)
+{
+    delete aActor;
+    return true;
+}
+
+PVirtualFileSystemChild*
+ContentChild::AllocPVirtualFileSystemChild()
+{
+    NS_NOTREACHED("We should never be manually allocating PVirtualFileSystemChild actors");
+    return nullptr;
+}
+
+bool
+ContentChild::DeallocPVirtualFileSystemChild(PVirtualFileSystemChild* aActor)
 {
     delete aActor;
     return true;

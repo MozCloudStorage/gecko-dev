@@ -24,7 +24,9 @@ public:
                                                          FileSystemProviderRequestedOptions)
 
   explicit GetMetadataRequestedOptions(nsISupports* aParent,
-                                       nsIVirtualFileSystemGetMetadataRequestedOptions* aOptions);
+                                       uint32_t aRequestId,
+                                       const nsAString& aFileSystemId,
+                                       const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -32,17 +34,16 @@ public:
 
 private:
   virtual ~GetMetadataRequestedOptions() = default;
-
-  nsString mEntryPath;
 };
 
 class FileSystemProviderGetMetadataEvent final
-  : public FileSystemProviderEventWrap<GetMetadataRequestedOptions,
-                                       nsIVirtualFileSystemGetMetadataRequestedOptions>
+  : public FileSystemProviderEventWrap<
+    GetMetadataRequestedOptions,
+    VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemGetMetadataRequestedOptions>
 {
 public:
   FileSystemProviderGetMetadataEvent(EventTarget* aOwner,
-                                     nsIVirtualFileSystemRequestManager* aManager);
+                                     nsVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

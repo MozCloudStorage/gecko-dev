@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "FileSystemProvider.h"
 #include "mozilla/dom/FileSystemProviderAbortEvent.h"
 #include "mozilla/dom/FileSystemProviderBinding.h"
 #include "mozilla/dom/FileSystemProviderCloseFileEvent.h"
@@ -13,67 +14,36 @@
 #include "mozilla/dom/FileSystemProviderReadFileEvent.h"
 #include "mozilla/dom/FileSystemProviderUnmountEvent.h"
 #include "mozilla/dom/Promise.h"
+#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
 #include "mozilla/unused.h"
-
-#include "VirtualFileSystemServiceFactory.h"
-#include "FileSystemProvider.h"
 #include "nsArrayUtils.h"
+#include "nsIVirtualFileSystemService.h"
 #include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestManager.h"
-#include "nsIVirtualFileSystemService.h"
+#include "VirtualFileSystemServiceFactory.h"
 
 namespace mozilla {
 namespace dom {
 
 using virtualfilesystem::nsVirtualFileSystemMountRequestedOptions;
 using virtualfilesystem::nsVirtualFileSystemUnmountRequestedOptions;
-
-class nsFileSystemProviderProxy : public nsISupports
-{
-public:
-  NS_DECL_THREADSAFE_ISUPPORTS
-
-  explicit nsFileSystemProviderProxy(FileSystemProvider* aProvider)
-    : mFileSystemProvider(aProvider) {}
-  void Forget() { mFileSystemProvider = nullptr; }
-
-protected:
-  virtual ~nsFileSystemProviderProxy() {}
-
-  FileSystemProvider* MOZ_NON_OWNING_REF mFileSystemProvider;
-};
+using virtualfilesystem::VirtualFileSystemServiceFactory;
+using virtualfilesystem::BaseVirtualFileSystemService;
 
 NS_IMPL_ISUPPORTS0(nsFileSystemProviderProxy)
 
-class nsFileSystemProviderEventDispatcher final
-  : public nsFileSystemProviderProxy
-  , public nsIFileSystemProviderEventDispatcher
-{
-public:
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIFILESYSTEMPROVIDEREVENTDISPATCHER
+NS_IMPL_ISUPPORTS_INHERITED0(nsFileSystemProviderEventDispatcher,
+                             nsFileSystemProviderProxy)
 
-  explicit nsFileSystemProviderEventDispatcher(FileSystemProvider* aProvider)
-    : nsFileSystemProviderProxy(aProvider) {}
-
-private:
-  virtual ~nsFileSystemProviderEventDispatcher() {}
-
-};
-
-NS_IMPL_ISUPPORTS_INHERITED(nsFileSystemProviderEventDispatcher,
-                            nsFileSystemProviderProxy,
-                            nsIFileSystemProviderEventDispatcher)
-
-NS_IMETHODIMP
+nsresult
 nsFileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
   uint32_t aRequestId,
-  uint32_t aRequestType,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  const nsAString& aFileSystemId,
+  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions)
 {
   return mFileSystemProvider->DispatchFileSystemProviderEventInternal(
     aRequestId,
-    aRequestType,
+    aFileSystemId,
     aOptions);
 }
 
@@ -203,19 +173,6 @@ FileSystemProvider::Create(nsPIDOMWindow* aWindow)
 already_AddRefed<Promise>
 FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
 {
-  nsCOMPtr<nsIVirtualFileSystemMountRequestedOptions> mountOptions =
-    new nsVirtualFileSystemMountRequestedOptions();
-  mountOptions->SetFileSystemId(aOptions.mFileSystemId);
-  mountOptions->SetDisplayName(aOptions.mDisplayName);
-  if (aOptions.mWritable.WasPassed() && !aOptions.mWritable.Value().IsNull()) {
-    mountOptions->SetWritable(aOptions.mWritable.Value().Value());
-  }
-  if (aOptions.mOpenedFilesLimit.WasPassed() &&
-      !aOptions.mOpenedFilesLimit.Value().IsNull()) {
-    mountOptions->SetOpenedFilesLimit(aOptions.mOpenedFilesLimit.Value().Value());
-  }
-  mountOptions->SetRequestId(++sRequestId);
-
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   MOZ_ASSERT(global);
 
@@ -223,12 +180,12 @@ FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
   if (NS_WARN_IF(aRv.Failed())) {
     return nullptr;
   }
-
-  mPendingRequestPromises[sRequestId] = promise;
+  mPendingRequestPromises[++sRequestId] = promise;
 
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
     new MountUnmountResultCallback(this);
-  nsresult rv = mVirtualFileSystemService->Mount(mountOptions,
+  nsresult rv = mVirtualFileSystemService->Mount(sRequestId,
+                                                 aOptions,
                                                  mRequestManager,
                                                  callback);
   if (NS_FAILED(rv)) {
@@ -242,11 +199,6 @@ FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
 already_AddRefed<Promise>
 FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
 {
-  nsCOMPtr<nsIVirtualFileSystemUnmountRequestedOptions> unmountOptions =
-    new nsVirtualFileSystemUnmountRequestedOptions();
-  unmountOptions->SetFileSystemId(aOptions.mFileSystemId);
-  unmountOptions->SetRequestId(++sRequestId);
-
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   MOZ_ASSERT(global);
 
@@ -254,12 +206,11 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
   if (NS_WARN_IF(aRv.Failed())) {
     return nullptr;
   }
-
-  mPendingRequestPromises[sRequestId] = promise;
+  mPendingRequestPromises[++sRequestId] = promise;
 
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
     new MountUnmountResultCallback(this);
-  nsresult rv = mVirtualFileSystemService->Unmount(unmountOptions, callback);
+  nsresult rv = mVirtualFileSystemService->Unmount(sRequestId, aOptions, callback);
   if (NS_FAILED(rv)) {
     aRv.Throw(rv);
     return nullptr;
@@ -366,34 +317,30 @@ FileSystemProvider::GetAll(Nullable<nsTArray<FileSystemInfo>>& aRetVal, ErrorRes
 nsresult
 FileSystemProvider::DispatchFileSystemProviderEventInternal(
   uint32_t aRequestId,
-  uint32_t aRequestType,
-  nsIVirtualFileSystemRequestedOptions* aOptions)
+  const nsAString& aFileSystemId,
+  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions)
 {
-  if (NS_WARN_IF(!aOptions)) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
   RefPtr<FileSystemProviderEvent> event;
-  switch (aRequestType) {
-    case nsIVirtualFileSystemRequestManager::REQUEST_ABORT:
+  switch (aOptions.type()) {
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemAbortRequestedOptions:
       event = new FileSystemProviderAbortEvent(this, mRequestManager);
       break;
-    case nsIVirtualFileSystemRequestManager::REQUEST_CLOSEFILE:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemCloseFileRequestedOptions:
       event = new FileSystemProviderCloseFileEvent(this, mRequestManager);
       break;
-    case nsIVirtualFileSystemRequestManager::REQUEST_GETMETADATA:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemGetMetadataRequestedOptions:
       event = new FileSystemProviderGetMetadataEvent(this, mRequestManager);
       break;
-    case nsIVirtualFileSystemRequestManager::REQUEST_OPENFILE:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemOpenFileRequestedOptions:
       event = new FileSystemProviderOpenFileEvent(this, mRequestManager);
       break;
-    case nsIVirtualFileSystemRequestManager::REQUEST_READDIRECTORY:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadDirectoryRequestedOptions:
       event = new FileSystemProviderReadDirectoryEvent(this, mRequestManager);
       break;
-    case nsIVirtualFileSystemRequestManager::REQUEST_READFILE:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadFileRequestedOptions:
       event = new FileSystemProviderReadFileEvent(this, mRequestManager);
       break;
-    case nsIVirtualFileSystemRequestManager::REQUEST_UNMOUNT:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemUnmountRequestedOptions:
       event = new FileSystemProviderUnmountEvent(this, mRequestManager);
       break;
     default:
@@ -401,7 +348,7 @@ FileSystemProvider::DispatchFileSystemProviderEventInternal(
       return NS_ERROR_INVALID_ARG;
   }
 
-  nsresult rv = event->InitFileSystemProviderEvent(aOptions);
+  nsresult rv = event->InitFileSystemProviderEvent(aRequestId, aFileSystemId, aOptions);
   if (NS_WARN_IF(NS_FAILED(rv))) {
     return rv;
   }

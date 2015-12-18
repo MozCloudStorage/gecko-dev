@@ -25,7 +25,9 @@ public:
                                                          FileSystemProviderRequestedOptions)
 
   explicit ReadFileRequestedOptions(nsISupports* aParent,
-                                    nsIVirtualFileSystemReadFileRequestedOptions* aOptions);
+                                    uint32_t aRequestId,
+                                    const nsAString& aFileSystemId,
+                                    const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -37,19 +39,16 @@ public:
 
 private:
   virtual ~ReadFileRequestedOptions() = default;
-
-  uint32_t mOpenRequestId;
-  uint64_t mOffset;
-  uint64_t mLength;
 };
 
 class FileSystemProviderReadFileEvent final
-  : public FileSystemProviderEventWrap<ReadFileRequestedOptions,
-                                       nsIVirtualFileSystemReadFileRequestedOptions>
+  : public FileSystemProviderEventWrap<
+    ReadFileRequestedOptions,
+    VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadFileRequestedOptions>
 {
 public:
   FileSystemProviderReadFileEvent(EventTarget* aOwner,
-                                  nsIVirtualFileSystemRequestManager* aManager);
+                                  nsVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

@@ -24,25 +24,26 @@ public:
                                                          FileSystemProviderRequestedOptions)
 
   explicit AbortRequestedOptions(nsISupports* aParent,
-                                 nsIVirtualFileSystemAbortRequestedOptions* aOptions);
+                                 uint32_t aRequestId,
+                                 const nsAString& aFileSystemId,
+                                 const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
   uint32_t OperationRequestId() const;
 
 private:
-  virtual ~AbortRequestedOptions() = default;
-
-  uint32_t mOperationRequestId;
+  ~AbortRequestedOptions() = default;
 };
 
 class FileSystemProviderAbortEvent final
-  : public FileSystemProviderEventWrap<AbortRequestedOptions,
-                                       nsIVirtualFileSystemAbortRequestedOptions>
+  : public FileSystemProviderEventWrap<
+    AbortRequestedOptions,
+    VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemAbortRequestedOptions>
 {
 public:
   FileSystemProviderAbortEvent(EventTarget* aOwner,
-                               nsIVirtualFileSystemRequestManager* aManager);
+                               nsVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

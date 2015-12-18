@@ -7,35 +7,46 @@
 
 #include <map>
 #include <vector>
-#include "nsCOMPtr.h"
-#include "nsIVirtualFileSystemRequestManager.h"
 
-class nsIFileSystemProviderEventDispatcher;
+#include "nsCycleCollectionParticipant.h"
 
 namespace mozilla {
 namespace dom {
+
+class nsFileSystemProviderEventDispatcher;
+
 namespace virtualfilesystem {
 
-class nsVirtualFileSystemRequestManager final : public nsIVirtualFileSystemRequestManager
+class VirtualFileSystemIPCRequestedOptions;
+
+class nsVirtualFileSystemRequestManager final : public nsISupports
 {
 public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIVIRTUALFILESYSTEMREQUESTMANAGER
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTION_CLASS(nsVirtualFileSystemRequestManager)
 
   nsVirtualFileSystemRequestManager();
   explicit nsVirtualFileSystemRequestManager(
-    nsIFileSystemProviderEventDispatcher* dispatcher);
+    nsFileSystemProviderEventDispatcher* dispatcher);
+
+  nsresult CreateRequest(const nsAString& aFileSystemId,
+                         const VirtualFileSystemIPCRequestedOptions& aOptions,
+                         nsIVirtualFileSystemCallback* aCallback,
+                         uint32_t* aRequestId);
+  nsresult FufillRequest(uint32_t aRequestId,
+                         nsIVirtualFileSystemRequestValue* aValue,
+                         bool aHasMore);
+  nsresult RejectRequest(uint32_t aRequestId, uint32_t aErrorCode);
+  nsresult SetRequestDispatcher(nsFileSystemProviderEventDispatcher* aDispatcher);
 
 private:
   class nsVirtualFileSystemRequest final : public nsISupports {
   public:
     NS_DECL_ISUPPORTS
 
-    explicit nsVirtualFileSystemRequest(uint32_t aRequestType,
-                                        uint32_t aRequestId,
+    explicit nsVirtualFileSystemRequest(uint32_t aRequestId,
                                         nsIVirtualFileSystemCallback* aCallback);
 
-    const uint32_t mRequestType;
     const uint32_t mRequestId;
     nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
     bool mIsCompleted;
@@ -52,7 +63,7 @@ private:
   RequestMapType mRequestMap;
   typedef std::vector<uint32_t> RequestIdQueueType;
   RequestIdQueueType mRequestIdQueue;
-  nsCOMPtr<nsIFileSystemProviderEventDispatcher> mDispatcher;
+  RefPtr<nsFileSystemProviderEventDispatcher> mDispatcher;
   uint32_t mRequestId;
 };
 

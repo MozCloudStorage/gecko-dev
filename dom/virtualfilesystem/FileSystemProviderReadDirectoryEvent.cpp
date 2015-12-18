@@ -11,6 +11,8 @@
 #include "nsCOMArray.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
+using mozilla::dom::virtualfilesystem::VirtualFileSystemReadDirectoryRequestedOptions;
+
 namespace mozilla {
 namespace dom {
 
@@ -36,10 +38,11 @@ NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 ReadDirectoryRequestedOptions::ReadDirectoryRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemReadDirectoryRequestedOptions* aOptions)
-  : FileSystemProviderRequestedOptions(aParent, aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aRequestId, aFileSystemId, aOptions)
 {
-  aOptions->GetDirPath(mDirectoryPath);
 }
 
 JSObject*
@@ -52,12 +55,13 @@ ReadDirectoryRequestedOptions::WrapObject(JSContext* aCx,
 void
 ReadDirectoryRequestedOptions::GetDirectoryPath(nsAString& aPath) const
 {
-  aPath = mDirectoryPath;
+  const VirtualFileSystemReadDirectoryRequestedOptions options = mOptions;
+  aPath = options.directoryPath();
 }
 
 FileSystemProviderReadDirectoryEvent::FileSystemProviderReadDirectoryEvent(
   EventTarget* aOwner,
-  nsIVirtualFileSystemRequestManager* aManager)
+  nsVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("readdirectoryrequested"))
 {

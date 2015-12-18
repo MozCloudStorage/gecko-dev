@@ -53,6 +53,7 @@ include protocol PRemoteSpellcheckEngine;
 include protocol PWebBrowserPersistDocument;
 include protocol PWebrtcGlobal;
 include protocol PPresentation;
+include protocol PVirtualFileSystem;
 include DOMTypes;
 include JavaScriptTypes;
 include InputStreamParams;
@@ -461,6 +462,7 @@ prio(normal upto urgent) sync protocol PContent
     manages PWebBrowserPersistDocument;
     manages PWebrtcGlobal;
     manages PPresentation;
+    manages PVirtualFileSystem;
 
 both:
     // Depending on exactly how the new browser is being created, it might be
@@ -815,6 +817,8 @@ parent:
     PWebrtcGlobal();
 
     PPresentation();
+
+    PVirtualFileSystem();
 
     // Services remoting
 

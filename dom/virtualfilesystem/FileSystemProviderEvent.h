@@ -12,13 +12,19 @@
 #include "mozilla/dom/BindingUtils.h"
 #include "mozilla/dom/Event.h"
 #include "mozilla/dom/FileSystemProviderEventBinding.h"
-#include "nsIVirtualFileSystemDataType.h"
+#include "mozilla/dom/virtualfilesystem/PVirtualFileSystem.h"
 
-class nsIVirtualFileSystemRequestManager;
 class nsIVirtualFileSystemRequestValue;
 
 namespace mozilla {
 namespace dom {
+
+namespace virtualfilesystem {
+  class nsVirtualFileSystemRequestManager;
+} // namespace virtualfilesystem
+
+using virtualfilesystem::VirtualFileSystemIPCRequestedOptions;
+using virtualfilesystem::nsVirtualFileSystemRequestManager;
 
 class FileSystemProviderRequestedOptions : public nsISupports
                                          , public nsWrapperCache
@@ -27,8 +33,11 @@ public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(FileSystemProviderRequestedOptions)
 
-  explicit FileSystemProviderRequestedOptions(nsISupports* aParent,
-                                              nsIVirtualFileSystemRequestedOptions* aOptions);
+  explicit FileSystemProviderRequestedOptions(
+    nsISupports* aParent,
+    uint32_t aRequestId,
+    const nsAString& aFileSystemId,
+    const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   nsISupports* GetParentObject() const
   {
@@ -36,7 +45,6 @@ public:
   }
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
-
   uint32_t RequestId() const;
   void GetFileSystemId(nsAString& aFileSystemId) const;
 
@@ -44,8 +52,9 @@ protected:
   virtual ~FileSystemProviderRequestedOptions() = default;
 
   nsCOMPtr<nsISupports> mParent;
-  nsString mFileSystemId;
   uint32_t mRequestId;
+  nsString mFileSystemId;
+  VirtualFileSystemIPCRequestedOptions mOptions;
 };
 
 class FileSystemProviderEvent : public Event
@@ -56,14 +65,16 @@ public:
                                                          Event)
 
   explicit FileSystemProviderEvent(EventTarget* aOwner,
-                                   nsIVirtualFileSystemRequestManager* aManager,
+                                   nsVirtualFileSystemRequestManager* aManager,
                                    const nsAString& aEventName);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;
 
   virtual nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) = 0;
+    uint32_t aRequestId,
+    const nsAString& aFileSystemId,
+    const VirtualFileSystemIPCRequestedOptions& aOptions) = 0;
 
   virtual void OnSuccess(nsIVirtualFileSystemRequestValue* aValue, bool aHasMore);
 
@@ -74,17 +85,17 @@ protected:
   void InitFileSystemProviderEventInternal(const nsAString& aType,
                                            FileSystemProviderRequestedOptions* aOptions);
 
-  nsCOMPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
+  RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
   RefPtr<FileSystemProviderRequestedOptions> mOptions;
   const nsString mEventName;
 };
 
-template <class WebIDLOptions, class XPIDLOptions>
+template <class WebIDLOptions, VirtualFileSystemIPCRequestedOptions::Type type>
 class FileSystemProviderEventWrap : public FileSystemProviderEvent
 {
 public:
   explicit FileSystemProviderEventWrap(EventTarget* aOwner,
-                                       nsIVirtualFileSystemRequestManager* aManager,
+                                       nsVirtualFileSystemRequestManager* aManager,
                                        const nsAString& aEventName)
     : FileSystemProviderEvent(aOwner, aManager, aEventName)
   {}
@@ -97,15 +108,19 @@ public:
   }
 
   nsresult InitFileSystemProviderEvent(
-    nsIVirtualFileSystemRequestedOptions* aOptions) override
+    uint32_t aRequestId,
+    const nsAString& aFileSystemId,
+    const VirtualFileSystemIPCRequestedOptions& aOptions) override
   {
-    nsCOMPtr<XPIDLOptions> opts = do_QueryInterface(aOptions);
-    if (!opts) {
-      MOZ_ASSERT(false, "Invalid nsIVirtualFileSystemRequestedOptions");
+    if (type != aOptions.type()) {
+      MOZ_ASSERT(false, "Invalid options.");
       return NS_ERROR_INVALID_ARG;
     }
 
-    RefPtr<WebIDLOptions> options = new WebIDLOptions(mOwner, opts);
+    RefPtr<WebIDLOptions> options = new WebIDLOptions(mOwner,
+                                                      aRequestId,
+                                                      aFileSystemId,
+                                                      aOptions);
     mOptions = options;
     Event::InitEvent(mEventName, false, false);
     return NS_OK;

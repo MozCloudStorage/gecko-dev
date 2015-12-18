@@ -32,8 +32,10 @@ NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 UnmountRequestedOptions::UnmountRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemUnmountRequestedOptions* aOptions)
-  : FileSystemProviderRequestedOptions(aParent, aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aRequestId, aFileSystemId, aOptions)
 {
 }
 
@@ -46,7 +48,7 @@ UnmountRequestedOptions::WrapObject(JSContext* aCx,
 
 FileSystemProviderUnmountEvent::FileSystemProviderUnmountEvent(
   EventTarget* aOwner,
-  nsIVirtualFileSystemRequestManager* aManager)
+  nsVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("unmountrequested"))
 {

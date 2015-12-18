@@ -69,6 +69,8 @@
 #include "mozilla/dom/quota/QuotaManager.h"
 #include "mozilla/dom/telephony/TelephonyParent.h"
 #include "mozilla/dom/time/DateCacheCleaner.h"
+#include "mozilla/dom/virtualfilesystem/PVirtualFileSystemParent.h"
+#include "mozilla/dom/virtualfilesystem/VirtualFileSystemParent.h"
 #include "mozilla/dom/voicemail/VoicemailParent.h"
 #include "mozilla/embedding/printingui/PrintingParent.h"
 #include "mozilla/hal_sandbox/PHalParent.h"
@@ -282,6 +284,7 @@ using namespace mozilla::dom::power;
 using namespace mozilla::dom::mobileconnection;
 using namespace mozilla::dom::mobilemessage;
 using namespace mozilla::dom::telephony;
+using namespace mozilla::dom::virtualfilesystem;
 using namespace mozilla::dom::voicemail;
 using namespace mozilla::media;
 using namespace mozilla::embedding;
@@ -4091,6 +4094,27 @@ bool
 ContentParent::RecvPPresentationConstructor(PPresentationParent* aActor)
 {
   return static_cast<PresentationParent*>(aActor)->Init();
+}
+
+PVirtualFileSystemParent*
+ContentParent::AllocPVirtualFileSystemParent()
+{
+    RefPtr<VirtualFileSystemParent> actor = new VirtualFileSystemParent();
+    return actor.forget().take();
+}
+
+bool
+ContentParent::DeallocPVirtualFileSystemParent(PVirtualFileSystemParent* aActor)
+{
+    RefPtr<VirtualFileSystemParent> actor =
+        dont_AddRef(static_cast<VirtualFileSystemParent*>(aActor));
+    return true;
+}
+
+bool
+ContentParent::RecvPVirtualFileSystemConstructor(PVirtualFileSystemParent* aActor)
+{
+    return static_cast<VirtualFileSystemParent*>(aActor)->Init();
 }
 
 PSpeechSynthesisParent*

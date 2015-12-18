@@ -26,7 +26,9 @@ public:
                                                          FileSystemProviderRequestedOptions)
 
   explicit ReadDirectoryRequestedOptions(nsISupports* aParent,
-                                         nsIVirtualFileSystemReadDirectoryRequestedOptions* aOptions);
+                                         uint32_t aRequestId,
+                                         const nsAString& aFileSystemId,
+                                         const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -34,17 +36,16 @@ public:
 
 private:
   virtual ~ReadDirectoryRequestedOptions() = default;
-
-  nsString mDirectoryPath;
 };
 
 class FileSystemProviderReadDirectoryEvent final
-  : public FileSystemProviderEventWrap<ReadDirectoryRequestedOptions,
-                                       nsIVirtualFileSystemReadDirectoryRequestedOptions>
+  : public FileSystemProviderEventWrap<
+    ReadDirectoryRequestedOptions,
+    VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadDirectoryRequestedOptions>
 {
 public:
   FileSystemProviderReadDirectoryEvent(EventTarget* aOwner,
-                                       nsIVirtualFileSystemRequestManager* aManager);
+                                       nsVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

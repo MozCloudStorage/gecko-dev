@@ -13,16 +13,18 @@ class nsIVirtualFileSystemService;
 
 namespace mozilla {
 namespace dom {
+namespace virtualfilesystem {
 
-class FakeVirtualFileSystemService;
+class BaseVirtualFileSystemService;
 
 class VirtualFileSystemServiceFactory
 {
 public:
-  static already_AddRefed<nsIVirtualFileSystemService> AutoCreateVirtualFileSystemService();
+  static already_AddRefed<BaseVirtualFileSystemService> AutoCreateVirtualFileSystemService();
 
 };
 
+} // namespace virtualfilesystem
 } // namespace dom
 } // namespace mozilla
 

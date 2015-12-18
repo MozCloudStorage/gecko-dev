@@ -24,7 +24,9 @@ public:
                                                          FileSystemProviderRequestedOptions)
 
   explicit CloseFileRequestedOptions(nsISupports* aParent,
-                                     nsIVirtualFileSystemCloseFileRequestedOptions* aOptions);
+                                     uint32_t aRequestId,
+                                     const nsAString& aFileSystemId,
+                                     const VirtualFileSystemIPCRequestedOptions& aOptions);
 
   virtual JSObject* WrapObject(JSContext* aCx, JS::Handle<JSObject*> aGivenProto) override;
 
@@ -32,17 +34,16 @@ public:
 
 private:
   virtual ~CloseFileRequestedOptions() = default;
-
-  uint32_t mOpenRequestId;
 };
 
 class FileSystemProviderCloseFileEvent final
-  : public FileSystemProviderEventWrap<CloseFileRequestedOptions,
-                                       nsIVirtualFileSystemCloseFileRequestedOptions>
+  : public FileSystemProviderEventWrap<
+    CloseFileRequestedOptions,
+    VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemCloseFileRequestedOptions>
 {
 public:
   FileSystemProviderCloseFileEvent(EventTarget* aOwner,
-                                   nsIVirtualFileSystemRequestManager* aManager);
+                                   nsVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

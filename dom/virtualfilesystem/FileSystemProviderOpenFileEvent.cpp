@@ -8,6 +8,8 @@
 #include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
+using mozilla::dom::virtualfilesystem::VirtualFileSystemOpenFileRequestedOptions;
+
 namespace mozilla {
 namespace dom {
 
@@ -33,13 +35,11 @@ NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 OpenFileRequestedOptions::OpenFileRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemOpenFileRequestedOptions* aOptions)
-  : FileSystemProviderRequestedOptions(aParent, aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aRequestId, aFileSystemId, aOptions)
 {
-  aOptions->GetFilePath(mFilePath);
-  uint32_t mode;
-  aOptions->GetMode(&mode);
-  mMode = static_cast<OpenFileMode>(mode);
 }
 
 JSObject*
@@ -52,18 +52,20 @@ OpenFileRequestedOptions::WrapObject(JSContext* aCx,
 void
 OpenFileRequestedOptions::GetFilePath(nsAString& aPath) const
 {
-  aPath = mFilePath;
+  const VirtualFileSystemOpenFileRequestedOptions options = mOptions;
+  aPath = options.filePath();
 }
 
 OpenFileMode
 OpenFileRequestedOptions::Mode() const
 {
-  return mMode;
+  const VirtualFileSystemOpenFileRequestedOptions options = mOptions;
+  return static_cast<OpenFileMode>(options.mode());
 }
 
 FileSystemProviderOpenFileEvent::FileSystemProviderOpenFileEvent(
   EventTarget* aOwner,
-  nsIVirtualFileSystemRequestManager* aManager)
+  nsVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("openfilerequested"))
 {

@@ -301,6 +301,10 @@ public:
 
     virtual PPresentationChild* AllocPPresentationChild() override;
     virtual bool DeallocPPresentationChild(PPresentationChild* aActor) override;
+
+    virtual PVirtualFileSystemChild* AllocPVirtualFileSystemChild() override;
+    virtual bool DeallocPVirtualFileSystemChild(PVirtualFileSystemChild* aActor) override;
+
     virtual bool RecvNotifyPresentationReceiverLaunched(PBrowserChild* aIframe,
                                                         const nsString& aSessionId) override;
     virtual bool RecvNotifyPresentationReceiverCleanUp(const nsString& aSessionId) override;

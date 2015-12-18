@@ -4,30 +4,41 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/dom/FakeVirtualFileSystemService.h"
-#include "nsVirtualFileSystemService.h"
+#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
+#include "mozilla/dom/VirtualFileSystemIPCService.h"
 #include "VirtualFileSystemServiceFactory.h"
-#include "nsIVirtualFileSystemService.h"
+
+#ifdef MOZ_WIDGET_GONK
+#include "nsVirtualFileSystemService.h"
+#endif
 
 namespace mozilla {
 namespace dom {
+namespace virtualfilesystem {
 
-/* static */ already_AddRefed<nsIVirtualFileSystemService>
+/* static */ already_AddRefed<BaseVirtualFileSystemService>
 VirtualFileSystemServiceFactory::AutoCreateVirtualFileSystemService()
 {
-  nsresult rv;
-  nsCOMPtr<nsIVirtualFileSystemService> service =
-    do_GetService(VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID);
-  if (!service) {
-    service = do_GetService(FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID, &rv);
+  MOZ_ASSERT(NS_IsMainThread());
 
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      return nullptr;
-    }
+  RefPtr<BaseVirtualFileSystemService> service;
+  if (!XRE_IsParentProcess()) {
+    service =
+      virtualfilesystem::VirtualFileSystemIPCService::GetSingleton();
+  }
+  else {
+  #ifdef MOZ_WIDGET_GONK
+    service =
+      virtualfilesystem::nsVirtualFileSystemService::GetSingleton();
+  #else
+    service =
+      virtualfilesystem::FakeVirtualFileSystemService::GetSingleton();
+  #endif
   }
 
   return service.forget();
 }
 
+} // namespace virtualfilesystem
 } // namespace dom
 } // namespace mozilla

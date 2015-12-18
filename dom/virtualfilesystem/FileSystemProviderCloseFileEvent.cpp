@@ -8,6 +8,8 @@
 #include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemRequestManager.h"
 
+using mozilla::dom::virtualfilesystem::VirtualFileSystemCloseFileRequestedOptions;
+
 namespace mozilla {
 namespace dom {
 
@@ -33,10 +35,11 @@ NS_INTERFACE_MAP_END_INHERITING(FileSystemProviderRequestedOptions)
 
 CloseFileRequestedOptions::CloseFileRequestedOptions(
   nsISupports* aParent,
-  nsIVirtualFileSystemCloseFileRequestedOptions* aOptions)
-  : FileSystemProviderRequestedOptions(aParent, aOptions)
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions)
+  : FileSystemProviderRequestedOptions(aParent, aRequestId, aFileSystemId, aOptions)
 {
-  aOptions->GetOpenRequestId(&mOpenRequestId);
 }
 
 JSObject*
@@ -49,12 +52,13 @@ CloseFileRequestedOptions::WrapObject(JSContext* aCx,
 uint32_t
 CloseFileRequestedOptions::OpenRequestId() const
 {
-  return mOpenRequestId;
+  const VirtualFileSystemCloseFileRequestedOptions options = mOptions;
+  return options.openRequestId();
 }
 
 FileSystemProviderCloseFileEvent::FileSystemProviderCloseFileEvent(
   EventTarget* aOwner,
-  nsIVirtualFileSystemRequestManager* aManager)
+  nsVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("closefilerequested"))
 {

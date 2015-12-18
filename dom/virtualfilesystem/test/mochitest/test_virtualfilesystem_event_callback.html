@@ -20,7 +20,7 @@ let Ci = SpecialPowers.Ci;
 SimpleTest.waitForExplicitFinish();
 
 function createRequest(aType, aOptions, aCallback) {
-  let vfsService = SpecialPowers.Cc["@mozilla.org/tv/fakevirtualfilesystemservice;1"].getService(Ci.nsIVirtualFileSystemService);
+  let vfsService = SpecialPowers.Cc["@mozilla.org/virtualfilesystem/fakevirtualfilesystemservice;1"].getService(Ci.nsIVirtualFileSystemService);
   let requestManager = vfsService.getRequestManagerById(aOptions.fileSystemId);
   return requestManager.createRequest(aType, aOptions, aCallback);
 }
@@ -107,7 +107,7 @@ function runTest() {
   });
 }
 
-SpecialPowers.pushPrefEnv({"set": [["device.storage.enabled", true],
+SpecialPowers.pushPrefEnv({"set": [["device.filesystemprovider.enabled", true],
                                     //to ignore app scope check.
                                    ["dom.ignore_webidl_scope_checks", true]]}, function() {
   SpecialPowers.pushPermissions(

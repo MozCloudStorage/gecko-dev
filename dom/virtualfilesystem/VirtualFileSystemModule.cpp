@@ -3,15 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/dom/FakeVirtualFileSystemService.h"
+#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
 #include "mozilla/ModuleUtils.h"
+#include "nsIVirtualFileSystemService.h"
 #include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "nsVirtualFileSystemRequestValue.h"
-
-#ifdef MOZ_WIDGET_GONK
-#include "nsVirtualFileSystemService.h"
-#endif
 
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemAbortRequestedOptions;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemCloseFileRequestedOptions;
@@ -24,12 +21,7 @@ using mozilla::dom::virtualfilesystem::nsVirtualFileSystemRequestManager;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemGetMetadataRequestValue;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue;
 using mozilla::dom::virtualfilesystem::nsVirtualFileSystemReadFileRequestValue;
-using mozilla::dom::FakeVirtualFileSystemService;
-
-#ifdef MOZ_WIDGET_GONK
-using mozilla::dom::virtualfilesystem::nsVirtualFileSystemService;
-#endif
-
+using mozilla::dom::virtualfilesystem::FakeVirtualFileSystemService;
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemAbortRequestedOptions)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMABORTREQUESTEDOPTIONS_CID);
@@ -64,16 +56,6 @@ NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMREADDIRECTORYREQUESTVALUE_CID);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsVirtualFileSystemReadFileRequestValue)
 NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMREADFILEREQUESTVALUE_CID);
 
-NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(FakeVirtualFileSystemService,
-                                         FakeVirtualFileSystemService::GetSingleton)
-NS_DEFINE_NAMED_CID(FAKEVIRTUALFILESYSTEMSERVICE_CID);
-
-#ifdef MOZ_WIDGET_GONK
-NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsVirtualFileSystemService,
-                                         nsVirtualFileSystemService::GetSingleton)
-NS_DEFINE_NAMED_CID(VIRTUALFILESYSTEMSERVICE_CID);
-#endif
-
 static const mozilla::Module::CIDEntry kVirtualFileSystemModuleCIDs[] = {
   { &kVIRTUALFILESYSTEMABORTREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemAbortRequestedOptionsConstructor },
   { &kVIRTUALFILESYSTEMCLOSEFILEREQUESTEDOPTIONS_CID, false, nullptr, nsVirtualFileSystemCloseFileRequestedOptionsConstructor },
@@ -86,10 +68,8 @@ static const mozilla::Module::CIDEntry kVirtualFileSystemModuleCIDs[] = {
   { &kVIRTUALFILESYSTEMGETMETADATAREQUESTVALUE_CID, false, nullptr, nsVirtualFileSystemGetMetadataRequestValueConstructor },
   { &kVIRTUALFILESYSTEMREADDIRECTORYREQUESTVALUE_CID, false, nullptr, nsVirtualFileSystemReadDirectoryRequestValueConstructor },
   { &kVIRTUALFILESYSTEMREADFILEREQUESTVALUE_CID, false, nullptr, nsVirtualFileSystemReadFileRequestValueConstructor },
-  { &kFAKEVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, FakeVirtualFileSystemServiceConstructor },
-#ifdef MOZ_WIDGET_GONK
-  { &kVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, nsVirtualFileSystemServiceConstructor },
-#endif
+  //{ &kFAKEVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, FakeVirtualFileSystemServiceConstructor },
+  //{ &kVIRTUALFILESYSTEMSERVICE_CID, false, nullptr, nsIVirtualFileSystemServiceConstructor },
   { nullptr }
 };
 
@@ -105,10 +85,8 @@ static const mozilla::Module::ContractIDEntry kVirtualFileSystemModuleContracts[
   { VIRTUAL_FILE_SYSTEM_GETMETADATA_REQUEST_VALUE_CONTRACT_ID, &kVIRTUALFILESYSTEMGETMETADATAREQUESTVALUE_CID },
   { VIRTUAL_FILE_SYSTEM_READDIRECTORY_REQUEST_VALUE_CONTRACT_ID, &kVIRTUALFILESYSTEMREADDIRECTORYREQUESTVALUE_CID },
   { VIRTUAL_FILE_SYSTEM_READFILE_REQUEST_VALUE_CONTRACT_ID, &kVIRTUALFILESYSTEMREADFILEREQUESTVALUE_CID },
-  { FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID, &kFAKEVIRTUALFILESYSTEMSERVICE_CID },
-#ifdef MOZ_WIDGET_GONK
-  { VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID, &kVIRTUALFILESYSTEMSERVICE_CID },
-#endif
+  //{ FAKE_VIRTUALFILESYSTEM_SERVICE_CONTRACTID, &kFAKEVIRTUALFILESYSTEMSERVICE_CID },
+  //{ VIRTUAL_FILE_SYSTEM_SERVICE_CONTRACT_ID, &kVIRTUALFILESYSTEMSERVICE_CID },
   { nullptr }
 };
 

@@ -84,7 +84,7 @@ function runTest() {
   });
 }
 
-SpecialPowers.pushPrefEnv({"set": [["device.storage.enabled", true],
+SpecialPowers.pushPrefEnv({"set": [["device.filesystemprovider.enabled", true],
                                     //to ignore app scope check.
                                    ["dom.ignore_webidl_scope_checks", true]]}, function() {
   SpecialPowers.pushPermissions(

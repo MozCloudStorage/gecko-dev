@@ -350,7 +350,6 @@ nsVirtualFileSystemInfo::RemoveOpenedFile(const uint32_t aOpenRequestId)
     }
   }
   if (idx == length) {
-    LOG("No opened file with requested id %d", aOpenRequestId);
     return NS_OK;
   }
   mOpenedFiles.RemoveElementAt(idx);

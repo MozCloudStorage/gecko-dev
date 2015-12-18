@@ -6,6 +6,7 @@
 #ifndef mozilla_dom_virtualfilesystem_nsVirtualFileSystemData_h
 #define mozilla_dom_virtualfilesystem_nsVirtualFileSystemData_h
 
+#include "mozilla/dom/FileSystemProviderBinding.h"
 #include "nsIVirtualFileSystemDataType.h"
 #include "nsString.h"
 

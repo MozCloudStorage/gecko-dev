@@ -739,6 +739,10 @@ private:
     virtual PWebBrowserPersistDocumentParent* AllocPWebBrowserPersistDocumentParent(PBrowserParent* aBrowser, const uint64_t& aOuterWindowID) override;
     virtual bool DeallocPWebBrowserPersistDocumentParent(PWebBrowserPersistDocumentParent* aActor) override;
 
+    virtual PVirtualFileSystemParent* AllocPVirtualFileSystemParent() override;
+    virtual bool DeallocPVirtualFileSystemParent(PVirtualFileSystemParent* aActor) override;
+    virtual bool RecvPVirtualFileSystemConstructor(PVirtualFileSystemParent* aActor) override;
+
     virtual bool RecvReadPrefsArray(InfallibleTArray<PrefSetting>* aPrefs) override;
     virtual bool RecvReadFontList(InfallibleTArray<FontListEntry>* retValue) override;
 
