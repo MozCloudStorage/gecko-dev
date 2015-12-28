@@ -13,45 +13,46 @@
 #include "mozilla/DOMEventTargetHelper.h"
 #include "nsIVirtualFileSystemCallback.h"
 
-class nsIVirtualFileSystemInfo;
-
 namespace mozilla {
 namespace dom {
 
 namespace virtualfilesystem {
-  class BaseVirtualFileSystemService;
-  class nsVirtualFileSystemRequestManager;
-  class VirtualFileSystemIPCRequestedOptions;
+
+class BaseVirtualFileSystemService;
+class nsVirtualFileSystem;
+class nsVirtualFileSystemRequestManager;
+class VirtualFileSystemIPCRequestedOptions;
+
 } // namespace virtualfilesystem
 
 struct MountOptions;
-class Promise;
 struct UnmountOptions;
+class Promise;
 class MountUnmountResultCallback;
 
-class nsFileSystemProviderProxy : public nsISupports
+class FileSystemProviderProxy : public nsISupports
 {
 public:
   NS_DECL_THREADSAFE_ISUPPORTS
 
-  explicit nsFileSystemProviderProxy(FileSystemProvider* aProvider)
+  explicit FileSystemProviderProxy(FileSystemProvider* aProvider)
     : mFileSystemProvider(aProvider) {}
   void Forget() { mFileSystemProvider = nullptr; }
 
 protected:
-  virtual ~nsFileSystemProviderProxy() {}
+  virtual ~FileSystemProviderProxy() {}
 
   FileSystemProvider* MOZ_NON_OWNING_REF mFileSystemProvider;
 };
 
-class nsFileSystemProviderEventDispatcher final
-  : public nsFileSystemProviderProxy
+class FileSystemProviderEventDispatcher final
+  : public FileSystemProviderProxy
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
 
-  explicit nsFileSystemProviderEventDispatcher(FileSystemProvider* aProvider)
-    : nsFileSystemProviderProxy(aProvider) {}
+  explicit FileSystemProviderEventDispatcher(FileSystemProvider* aProvider)
+    : FileSystemProviderProxy(aProvider) {}
 
   nsresult DispatchFileSystemProviderEvent(
     uint32_t aRequestId,
@@ -59,12 +60,13 @@ public:
     const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions);
 
 private:
-  virtual ~nsFileSystemProviderEventDispatcher() {}
+  virtual ~FileSystemProviderEventDispatcher() {}
 
 };
 
-using virtualfilesystem::nsVirtualFileSystemRequestManager;
 using virtualfilesystem::BaseVirtualFileSystemService;
+using virtualfilesystem::nsVirtualFileSystemRequestManager;
+using virtualfilesystem::nsVirtualFileSystem;
 
 class FileSystemProvider final : public DOMEventTargetHelper
 {
@@ -93,7 +95,7 @@ public:
   void GetAll(Nullable<nsTArray<FileSystemInfo>>& aRetVal, ErrorResult& aRv);
 
 private:
-  friend class nsFileSystemProviderEventDispatcher;
+  friend class FileSystemProviderEventDispatcher;
   friend class MountUnmountResultCallback;
 
   explicit FileSystemProvider(nsPIDOMWindow* aWindow);
@@ -103,11 +105,9 @@ private:
     uint32_t aRequestId,
     const nsAString& aFileSystemId,
     const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions);
-  void ConvertVirtualFileSystemInfo(FileSystemInfo& aRetInfo,
-                                    nsIVirtualFileSystemInfo* aInfo);
   void NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded);
 
-  RefPtr<nsFileSystemProviderEventDispatcher> mEventDispatcher;
+  RefPtr<FileSystemProviderEventDispatcher> mEventDispatcher;
   RefPtr<BaseVirtualFileSystemService> mVirtualFileSystemService;
   RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
   std::map<uint32_t, RefPtr<Promise>> mPendingRequestPromises;

@@ -8,7 +8,7 @@
  */
 
 // Options for FileSystemProviderCloseFileEvent.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface CloseFileRequestedOptions : FileSystemProviderRequestedOptions {
   // A request ID used to open the file.
   readonly attribute unsigned long openRequestId;
@@ -16,7 +16,7 @@ interface CloseFileRequestedOptions : FileSystemProviderRequestedOptions {
 
 // Raised when opening a file previously opened with
 // openRequestId is requested to be closed.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderCloseFileEvent : FileSystemProviderEvent {
   readonly attribute CloseFileRequestedOptions options;
   void successCallback();

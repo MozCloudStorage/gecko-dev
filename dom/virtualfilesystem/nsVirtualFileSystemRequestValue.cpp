@@ -7,7 +7,6 @@
 #include "mozilla/Move.h"
 #include "mozilla/mozalloc.h"
 #include "nsArrayUtils.h"
-#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsComponentManagerUtils.h"
 #include "nsMemory.h"
@@ -16,6 +15,104 @@
 namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
+
+NS_IMPL_ISUPPORTS(nsEntryMetadata, nsIEntryMetadata)
+
+NS_IMETHODIMP
+nsEntryMetadata::GetIsDirectory(bool* aIsDirectory)
+{
+  if (NS_WARN_IF(!aIsDirectory)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aIsDirectory = mIsDirectory;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::SetIsDirectory(bool aIsDirectory)
+{
+  mIsDirectory = aIsDirectory;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::GetName(nsAString& aName)
+{
+  aName = mName;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::SetName(const nsAString& aName)
+{
+  mName = aName;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::GetSize(uint64_t* aSize)
+{
+  if (NS_WARN_IF(!aSize)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aSize = mSize;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::SetSize(uint64_t aSize)
+{
+  mSize = aSize;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::GetModificationTime(DOMTimeStamp* aModificationTime)
+{
+  if (NS_WARN_IF(!aModificationTime)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  *aModificationTime = mModificationTime;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::SetModificationTime(DOMTimeStamp aModificationTime)
+{
+  mModificationTime = aModificationTime;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::GetMimeType(nsAString& aMimeType)
+{
+  aMimeType = mMimeType;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEntryMetadata::SetMimeType(const nsAString& aMimeType)
+{
+  mMimeType = aMimeType;
+  return NS_OK;
+}
+
+/* static */ already_AddRefed<nsIEntryMetadata>
+nsEntryMetadata::FromEntryMetadata(const EntryMetadata& aData)
+{
+  nsCOMPtr<nsIEntryMetadata> data = new nsEntryMetadata();
+  data->SetIsDirectory(aData.mIsDirectory);
+  data->SetName(aData.mName);
+  data->SetSize(aData.mSize);
+  data->SetModificationTime(aData.mModificationTime);
+  if (aData.mMimeType.WasPassed() && !aData.mMimeType.Value().IsEmpty()) {
+    data->SetMimeType(aData.mMimeType.Value());
+  }
+  return data.forget();
+}
 
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemGetMetadataRequestValue,
                   nsIVirtualFileSystemRequestValue,
@@ -61,8 +158,8 @@ nsVirtualFileSystemReadDirectoryRequestValue::nsVirtualFileSystemReadDirectoryRe
 NS_IMETHODIMP
 nsVirtualFileSystemReadDirectoryRequestValue::GetEntries(uint32_t* aCount, nsIEntryMetadata*** aEntries)
 {
-  if (NS_WARN_IF(!(aEntries && aEntries))) {
-    return NS_ERROR_INVALID_POINTER;
+  if (NS_WARN_IF(!(aCount && aEntries))) {
+    return NS_ERROR_INVALID_ARG;
   }
 
   *aCount = 0;

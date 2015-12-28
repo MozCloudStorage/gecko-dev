@@ -8,7 +8,7 @@
  */
 
 // Options for the FileSystemProviderReadDirectoryEvent.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface ReadDirectoryRequestedOptions : FileSystemProviderRequestedOptions {
   // The path of the directory which contents are requested.
   readonly attribute DOMString directoryPath;
@@ -18,7 +18,7 @@ interface ReadDirectoryRequestedOptions : FileSystemProviderRequestedOptions {
 // requested. The results must be returned in chunks by calling the
 // successCallback several times. In case of an error,
 // errorCallback must be called.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderReadDirectoryEvent : FileSystemProviderEvent {
   readonly attribute ReadDirectoryRequestedOptions options;
 

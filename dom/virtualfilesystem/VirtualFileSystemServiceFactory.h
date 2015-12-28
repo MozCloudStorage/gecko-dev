@@ -9,8 +9,6 @@
 
 #include "nsCOMPtr.h"
 
-class nsIVirtualFileSystemService;
-
 namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {

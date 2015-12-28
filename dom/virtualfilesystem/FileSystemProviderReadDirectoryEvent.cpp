@@ -6,10 +6,7 @@
 
 #include "mozilla/dom/FileSystemProviderReadDirectoryEvent.h"
 #include "mozilla/Move.h"
-#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
-#include "nsCOMArray.h"
-#include "nsIVirtualFileSystemRequestManager.h"
 
 using mozilla::dom::virtualfilesystem::VirtualFileSystemReadDirectoryRequestedOptions;
 

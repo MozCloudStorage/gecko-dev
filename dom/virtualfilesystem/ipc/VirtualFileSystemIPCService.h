@@ -8,18 +8,17 @@
 #define mozilla_dom_VirtualFileSystemIPCService_h
 
 #include <map>
-#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
-#include "mozilla/StaticPtr.h"
-#include "nsIVirtualFileSystemService.h"
+#include "nsVirtualFileSystemService.h"
 
 namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
-class VirtualFileSystemIPCService final
-  : public BaseVirtualFileSystemServiceWrapper<VirtualFileSystemIPCService>
+class VirtualFileSystemIPCService final : public BaseVirtualFileSystemService
 {
 public:
+  static already_AddRefed<VirtualFileSystemIPCService> GetSingleton();
+
   virtual nsresult Mount(uint32_t aRequestId,
                          const MountOptions& aOptions,
                          nsVirtualFileSystemRequestManager* aRequestManager,
@@ -27,17 +26,14 @@ public:
   virtual nsresult Unmount(uint32_t aRequestId,
                            const UnmountOptions& aOptions,
                            nsIVirtualFileSystemCallback* aCallback) override;
-  virtual nsresult GetVirtualFileSystemById(const nsAString& aFileSystemId,
-                                            nsIVirtualFileSystemInfo** aInfo) override;
-  virtual nsresult GetAllVirtualFileSystem(nsIArray** aFileSystems) override;
   void NotifyVirtualFileSystemChildDestroyed();
   bool NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded);
 
 private:
-  friend class BaseVirtualFileSystemServiceWrapper<VirtualFileSystemIPCService>;
   VirtualFileSystemIPCService();
   ~VirtualFileSystemIPCService();
 
+  static StaticRefPtr<VirtualFileSystemIPCService> sSingleton;
   typedef std::map<uint32_t, nsCOMPtr<nsIVirtualFileSystemCallback>> CallbackMapType;
   CallbackMapType mMountUnmountCallbackMap;
 };

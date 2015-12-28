@@ -7,13 +7,12 @@
 
 #include <map>
 #include <vector>
-
 #include "nsCycleCollectionParticipant.h"
 
 namespace mozilla {
 namespace dom {
 
-class nsFileSystemProviderEventDispatcher;
+class FileSystemProviderEventDispatcher;
 
 namespace virtualfilesystem {
 
@@ -25,9 +24,8 @@ public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_CYCLE_COLLECTION_CLASS(nsVirtualFileSystemRequestManager)
 
-  nsVirtualFileSystemRequestManager();
   explicit nsVirtualFileSystemRequestManager(
-    nsFileSystemProviderEventDispatcher* dispatcher);
+    FileSystemProviderEventDispatcher* aEventDispatcher);
 
   nsresult CreateRequest(const nsAString& aFileSystemId,
                          const VirtualFileSystemIPCRequestedOptions& aOptions,
@@ -37,7 +35,6 @@ public:
                          nsIVirtualFileSystemRequestValue* aValue,
                          bool aHasMore);
   nsresult RejectRequest(uint32_t aRequestId, uint32_t aErrorCode);
-  nsresult SetRequestDispatcher(nsFileSystemProviderEventDispatcher* aDispatcher);
 
 private:
   class nsVirtualFileSystemRequest final : public nsISupports {
@@ -63,7 +60,7 @@ private:
   RequestMapType mRequestMap;
   typedef std::vector<uint32_t> RequestIdQueueType;
   RequestIdQueueType mRequestIdQueue;
-  RefPtr<nsFileSystemProviderEventDispatcher> mDispatcher;
+  RefPtr<FileSystemProviderEventDispatcher> mEventDispatcher;
   uint32_t mRequestId;
 };
 

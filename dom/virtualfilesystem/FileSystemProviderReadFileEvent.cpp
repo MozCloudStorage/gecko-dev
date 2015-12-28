@@ -5,8 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderReadFileEvent.h"
-#include "nsIVirtualFileSystemDataType.h"
-#include "nsIVirtualFileSystemRequestManager.h"
 #include "nsVirtualFileSystemRequestValue.h"
 
 using mozilla::dom::virtualfilesystem::VirtualFileSystemReadFileRequestedOptions;

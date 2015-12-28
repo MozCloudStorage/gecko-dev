@@ -4,9 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
 #include "mozilla/unused.h"
 #include "nsVirtualFileSystemRequestManager.h"
+#include "nsVirtualFileSystemService.h"
 #include "VirtualFileSystemParent.h"
 #include "VirtualFileSystemServiceFactory.h"
 
@@ -95,7 +95,7 @@ VirtualFileSystemParent::RecvMount(
   const MountOptions& aOptions)
 {
   RefPtr<nsVirtualFileSystemRequestManager> manager =
-    new nsVirtualFileSystemRequestManager();
+    new nsVirtualFileSystemRequestManager(nullptr);
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
     new MountUnmountResultCallback(this);
   if (NS_FAILED(mVirtualFileSystemService->Mount(aRequestId,

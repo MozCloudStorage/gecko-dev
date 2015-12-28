@@ -4,36 +4,16 @@
 
 #include "nsISupports.idl"
 
-interface nsIArray;
-interface nsIVirtualFileSystemCallback;
-interface nsIVirtualFileSystemInfo;
-interface nsIVirtualFileSystemMountRequestedOptions;
-interface nsIVirtualFileSystemRequestManager;
-interface nsIVirtualFileSystemUnmountRequestedOptions;
+interface nsIVirtualFileSystem;
 
 /**
  * A service used by FileSystemProvider to manage all virtual file systems
  */
-[scriptable, uuid(04f7727c-b9e9-4e87-9525-be7aac4bf28f)]
+[scriptable, uuid(5f1c80e1-ae01-408f-97e7-5ebce3bd611a)]
 interface nsIVirtualFileSystemService : nsISupports
 {
-  // Create virtual file system with the specified name.
-  void mount(in nsIVirtualFileSystemMountRequestedOptions options,
-             in nsIVirtualFileSystemRequestManager requestManager,
-             in nsIVirtualFileSystemCallback callback);
-
-  // Remove virtual file system with the specified file system identify.
-  void unmount(in nsIVirtualFileSystemUnmountRequestedOptions options,
-               in nsIVirtualFileSystemCallback callback);
-
   // Get virtual file system instance with the file system identify.
-  nsIVirtualFileSystemInfo getVirtualFileSystemById(in DOMString fileSystemId);
-
-  // Get all virtual file systems
-  nsIArray getAllVirtualFileSystem();
-
-  // This is for testing.
-  nsIVirtualFileSystemRequestManager getRequestManagerById(in DOMString fileSystemId);
+  nsIVirtualFileSystem getVirtualFileSystemById(in DOMString fileSystemId);
 };
 
 %{C++

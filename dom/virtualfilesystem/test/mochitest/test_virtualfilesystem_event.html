@@ -53,23 +53,11 @@ function testEvent() {
       function() {
         ok(true, "mount ok.");
         var vfsService;
-        if (SpecialPowers.isMainProcess()) {
-          vfsService = SpecialPowers.Cc["@mozilla.org/virtualfilesystem/fakevirtualfilesystemservice;1"].getService(Ci.nsIVirtualFileSystemService);
-        }
-        else {
-          vfsService = SpecialPowers.Cc["@mozilla.org/virtualfilesystem/virtualfilesystem-service;1"].getService(Ci.nsIVirtualFileSystemService);
-        }
+        vfsService = SpecialPowers.Cc["@mozilla.org/virtualfilesystem/virtualfilesystem-service;1"].getService(Ci.nsIVirtualFileSystemService);
         ok(vfsService, "must have vfsService");
-        var requestManager = vfsService.getRequestManagerById(_fileSystemId);
-        ok(requestManager, "must have request manager.");
-
-        var abortOptions = SpecialPowers.Cc["@mozilla.org/virtualfilesystem/virtualfilesystem-abort-requested-options;1"].createInstance(Ci.nsIVirtualFileSystemAbortRequestedOptions);
-        abortOptions.fileSystemId = _fileSystemId;
-        abortOptions.requestId = _requestId;
-        abortOptions.operationRequestId = _operationRequestId;
-        requestManager.createRequest(Ci.nsIVirtualFileSystemRequestManager.REQUEST_ABORT,
-                                     abortOptions,
-                                     new MockCallback());
+        var vfs = vfsService.getVirtualFileSystemById(_fileSystemId);
+        ok(vfs, "must have virtual file system.");
+        vfs.abort(_requestId, new MockCallback());
       },
       function(aError) {
         ok(false, "Fail to mount: " + aError);

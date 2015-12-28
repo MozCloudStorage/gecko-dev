@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsIVirtualFileSystemDataType.h"
-#include "nsIVirtualFileSystemRequestManager.h"
+#include "mozilla/dom/virtualfilesystem/VirtualFileSystemIPCService.h"
+#include "nsVirtualFileSystemRequestManager.h"
 #include "VirtualFileSystemChild.h"
 
 namespace mozilla {
@@ -78,10 +78,10 @@ VirtualFileSystemChild::RecvPVirtualFileSystemRequestConstructor(
 {
   MOZ_ASSERT(mService);
 
-  PVirtualFileSystemRequestChild* actor =
+  /*PVirtualFileSystemRequestChild* actor =
     static_cast<VirtualFileSystemRequestChild*>(aActor);
 
-  /*nsCOMPtr<nsIVirtualFileSystemRequestManager> manager;
+  nsCOMPtr<nsIVirtualFileSystemRequestManager> manager;
   if (NS_FAILED(mService->GetRequestManagerById(aFileSystemId,
                                                 getter_AddRefs(manager)))) {
     return false;

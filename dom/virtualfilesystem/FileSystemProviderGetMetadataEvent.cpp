@@ -5,9 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/dom/FileSystemProviderGetMetadataEvent.h"
-#include "nsVirtualFileSystemDataType.h"
 #include "nsVirtualFileSystemRequestValue.h"
-#include "nsIVirtualFileSystemRequestManager.h"
 
 using mozilla::dom::virtualfilesystem::VirtualFileSystemGetMetadataRequestedOptions;
 

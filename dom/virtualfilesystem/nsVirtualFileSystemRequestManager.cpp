@@ -5,7 +5,6 @@
 #include <algorithm>
 #include "mozilla/dom/FileSystemProvider.h"
 #include "mozilla/dom/virtualfilesystem/PVirtualFileSystem.h"
-#include "nsIVirtualFileSystemDataType.h"
 #include "nsIVirtualFileSystemCallback.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "nsQueryObject.h"
@@ -64,32 +63,6 @@ private:
   uint32_t mErrorCode;
 };
 
-class DispatchRequestTask : public nsRunnable
-{
-public:
-  explicit DispatchRequestTask(uint32_t aRequestId,
-                               const nsAString& aFileSystemId,
-                               const VirtualFileSystemIPCRequestedOptions& aOptions,
-                               nsFileSystemProviderEventDispatcher* aDispatcher)
-    : mRequestId(aRequestId)
-    , mFileSystemId(aFileSystemId)
-    , mOptions(aOptions)
-    , mDispatcher(aDispatcher)
-  {}
-
-  NS_IMETHOD Run()
-  {
-    mDispatcher->DispatchFileSystemProviderEvent(mRequestId, mFileSystemId, mOptions);
-    return NS_OK;
-  }
-
-private:
-  uint32_t mRequestId;
-  nsString mFileSystemId;
-  VirtualFileSystemIPCRequestedOptions mOptions;
-  RefPtr<nsFileSystemProviderEventDispatcher> mDispatcher;
-};
-
 NS_IMPL_ISUPPORTS0(nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest)
 
 nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest
@@ -116,14 +89,9 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsVirtualFileSystemRequestManager)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
 NS_INTERFACE_MAP_END
 
-nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequestManager()
-  : mRequestId(0)
-{
-}
-
 nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequestManager(
-  nsFileSystemProviderEventDispatcher* dispatcher)
-  : mDispatcher(dispatcher)
+  FileSystemProviderEventDispatcher* aEventDispatcher)
+  : mEventDispatcher(aEventDispatcher)
   , mRequestId(0)
 {
 }
@@ -140,25 +108,33 @@ nsVirtualFileSystemRequestManager::CreateRequest(const nsAString& aFileSystemId,
     return NS_ERROR_INVALID_ARG;
   }
 
+  if (NS_WARN_IF(!mEventDispatcher)) {
+    return NS_ERROR_NOT_INITIALIZED;
+  }
+
   *aRequestId = 0;
 
   if (NS_WARN_IF(!(aCallback))) {
     return NS_ERROR_INVALID_ARG;
   }
 
-  if (NS_WARN_IF(!mDispatcher)) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
-
   RefPtr<nsVirtualFileSystemRequest> request =
     new nsVirtualFileSystemRequest(++mRequestId, aCallback);
   mRequestMap[mRequestId] = request;
   mRequestIdQueue.push_back(mRequestId);
-  nsCOMPtr<nsIRunnable> dispatchTask = new DispatchRequestTask(mRequestId,
-                                                               aFileSystemId,
-                                                               aOptions,
-                                                               mDispatcher);
 
+  printf_stderr("############### abort 3\n");
+  RefPtr<nsVirtualFileSystemRequestManager> self = this;
+  nsString fileSystemId(aFileSystemId);
+  nsCOMPtr<nsIRunnable> dispatchTask =
+    NS_NewRunnableFunction([self, fileSystemId, aOptions] () -> void
+      {
+        printf_stderr("############### abort 4\n");
+        self->mEventDispatcher->DispatchFileSystemProviderEvent(self->mRequestId,
+                                                                fileSystemId,
+                                                                aOptions);
+      });
+    printf_stderr("############### abort 5\n");
   nsresult rv = NS_DispatchToCurrentThread(dispatchTask);
   if (NS_FAILED(rv)) {
     DestroyRequest(mRequestId);
@@ -235,16 +211,6 @@ nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t a
                                           aErrorCode);
   NS_DispatchToCurrentThread(callback);
   DestroyRequest(aRequestId);
-  return NS_OK;
-}
-
-nsresult
-nsVirtualFileSystemRequestManager::SetRequestDispatcher(
-  nsFileSystemProviderEventDispatcher* aDispatcher)
-{
-  MOZ_ASSERT(NS_IsMainThread());
-
-  mDispatcher = aDispatcher;
   return NS_OK;
 }
 

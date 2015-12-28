@@ -14,29 +14,26 @@
 #include "mozilla/dom/FileSystemProviderReadFileEvent.h"
 #include "mozilla/dom/FileSystemProviderUnmountEvent.h"
 #include "mozilla/dom/Promise.h"
-#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
 #include "mozilla/unused.h"
 #include "nsArrayUtils.h"
-#include "nsIVirtualFileSystemService.h"
-#include "nsVirtualFileSystemDataType.h"
+#include "nsVirtualFileSystem.h"
+#include "nsVirtualFileSystemService.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "VirtualFileSystemServiceFactory.h"
 
 namespace mozilla {
 namespace dom {
 
-using virtualfilesystem::nsVirtualFileSystemMountRequestedOptions;
-using virtualfilesystem::nsVirtualFileSystemUnmountRequestedOptions;
 using virtualfilesystem::VirtualFileSystemServiceFactory;
 using virtualfilesystem::BaseVirtualFileSystemService;
 
-NS_IMPL_ISUPPORTS0(nsFileSystemProviderProxy)
+NS_IMPL_ISUPPORTS0(FileSystemProviderProxy)
 
-NS_IMPL_ISUPPORTS_INHERITED0(nsFileSystemProviderEventDispatcher,
-                             nsFileSystemProviderProxy)
+NS_IMPL_ISUPPORTS_INHERITED0(FileSystemProviderEventDispatcher,
+                             FileSystemProviderProxy)
 
 nsresult
-nsFileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
+FileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
   uint32_t aRequestId,
   const nsAString& aFileSystemId,
   const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions)
@@ -47,7 +44,7 @@ nsFileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
     aOptions);
 }
 
-class MountUnmountResultCallback final : public nsFileSystemProviderProxy
+class MountUnmountResultCallback final : public FileSystemProviderProxy
                                        , public nsIVirtualFileSystemCallback
 {
 public:
@@ -55,14 +52,14 @@ public:
   NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
 
   explicit MountUnmountResultCallback(FileSystemProvider* aProvider)
-    : nsFileSystemProviderProxy(aProvider) {}
+    : FileSystemProviderProxy(aProvider) {}
 
 private:
   virtual ~MountUnmountResultCallback() {}
 };
 
 NS_IMPL_ISUPPORTS_INHERITED(MountUnmountResultCallback,
-                            nsFileSystemProviderProxy,
+                            FileSystemProviderProxy,
                             nsIVirtualFileSystemCallback)
 
 NS_IMETHODIMP
@@ -134,7 +131,7 @@ NS_INTERFACE_MAP_END_INHERITING(DOMEventTargetHelper)
 
 FileSystemProvider::FileSystemProvider(nsPIDOMWindow* aWindow)
   : DOMEventTargetHelper(aWindow)
-  , mEventDispatcher(new nsFileSystemProviderEventDispatcher(this))
+  , mEventDispatcher(new FileSystemProviderEventDispatcher(this))
 {
 }
 
@@ -220,98 +217,23 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
 }
 
 void
-FileSystemProvider::ConvertVirtualFileSystemInfo(FileSystemInfo& aRetInfo,
-                                                 nsIVirtualFileSystemInfo* aInfo)
-{
-  if (!aInfo) {
-    return;
-  }
-
-  nsString fileSystemId;
-  aInfo->GetFileSystemId(fileSystemId);
-  nsString displayName;
-  aInfo->GetDisplayName(displayName);
-  bool writable;
-  aInfo->GetWritable(&writable);
-  uint32_t openedFilesLimit;
-  aInfo->GetOpenedFilesLimit(&openedFilesLimit);
-
-  aRetInfo.mFileSystemId.Construct(fileSystemId);
-  aRetInfo.mDisplayName.Construct(displayName);
-  aRetInfo.mWritable.Construct(writable);
-  aRetInfo.mOpenedFilesLimit.Construct(openedFilesLimit);
-
-  nsCOMPtr<nsIArray> opendFiles;
-  aInfo->GetOpenedFiles(getter_AddRefs(opendFiles));
-  if (opendFiles) {
-    Sequence<OpenedFile> openedFileSequence;
-    uint32_t len = 0;
-    opendFiles->GetLength(&len);
-    for (uint32_t i = 0; i < len; i++) {
-      nsCOMPtr<nsIVirtualFileSystemOpenedFileInfo> fileInfo
-        = do_QueryElementAt(opendFiles, i);
-      if (fileInfo) {
-        nsString filePath;
-        fileInfo->GetFilePath(filePath);
-        uint32_t mode;
-        fileInfo->GetMode(&mode);
-        uint32_t openRequestId;
-        fileInfo->GetOpenRequestId(&openRequestId);
-
-        OpenedFile file;
-        file.mFilePath.Construct(filePath);
-        file.mMode.Construct(static_cast<OpenFileMode>(mode));
-        file.mOpenRequestId.Construct(openRequestId);
-        openedFileSequence.AppendElement(file,  fallible);
-      }
-    }
-  aRetInfo.mOpenedFiles.Construct(openedFileSequence);
-  }
-}
-
-void
 FileSystemProvider::Get(const nsAString& aFileSystemId,
                         Nullable<FileSystemInfo>& aInfo,
                         ErrorResult& aRv)
 {
-  aInfo.SetNull();
-
-  nsCOMPtr<nsIVirtualFileSystemInfo> info;
-  nsresult rv = mVirtualFileSystemService->GetVirtualFileSystemById(aFileSystemId,
-                                                                    getter_AddRefs(info));
+  nsresult rv = mVirtualFileSystemService->GetFileSysetmInfoById(aFileSystemId,
+                                                                 aInfo.SetValue());
   if (NS_FAILED(rv)) {
+    aInfo.SetNull();
     aRv.Throw(rv);
-    return;
   }
-
-  ConvertVirtualFileSystemInfo(aInfo.SetValue(), info);
 }
 
 void
 FileSystemProvider::GetAll(Nullable<nsTArray<FileSystemInfo>>& aRetVal, ErrorResult& aRv)
 {
-  aRetVal.SetNull();
-
-  nsCOMPtr<nsIArray> fileSystemArray;
-  nsresult rv = mVirtualFileSystemService->GetAllVirtualFileSystem(
-    getter_AddRefs(fileSystemArray));
-  if (NS_FAILED(rv)) {
-    aRv.Throw(rv);
-    return;
-  }
-
   aRetVal.SetValue().TruncateLength(0);
-
-  uint32_t len = 0;
-  fileSystemArray->GetLength(&len);
-  for (uint32_t i = 0; i < len; i++) {
-    nsCOMPtr<nsIVirtualFileSystemInfo> info = do_QueryElementAt(fileSystemArray, i);
-    if (info) {
-      FileSystemInfo fileSystemInfo;
-      ConvertVirtualFileSystemInfo(fileSystemInfo, info);
-      aRetVal.SetValue().AppendElement(fileSystemInfo);
-    }
-  }
+  mVirtualFileSystemService->GetAllFileSystemInfo(aRetVal.SetValue());
 }
 
 nsresult

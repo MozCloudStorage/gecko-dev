@@ -4,36 +4,38 @@
 
 #include "nsISupports.idl"
 
-interface nsIVirtualFileSystemInfo;
-interface nsIVirtualFileSystemOpenedFileInfo;
-interface nsIVirtualFileSystemRequestValue;
+interface nsIVirtualFileSystemCallback;
 
 /**
  * XPCOM component which provides file system implementation.
  * Create and forward requests between providers and clients.
  */
-[scriptable, uuid(aedc71ab-cb17-40dd-a2ee-09a2b47e4011)]
+[scriptable, uuid(4fa8b88d-0622-45be-8a55-51b9f9fa62b7)]
 interface nsIVirtualFileSystem : nsISupports
 {
-  readonly attribute nsIVirtualFileSystemInfo info;
+  unsigned long abort(in unsigned long operationId,
+                      in nsIVirtualFileSystemCallback callback);
 
-  unsigned long abort(in unsigned long aOperationId);
-  unsigned long openFile(in DOMString aPath, in unsigned short aMode);
-  unsigned long closeFile(in unsigned long aOpenFileId);
-  unsigned long getMetadata(in DOMString aEntryPath);
-  unsigned long readDirectory(in DOMString aDirPath);
+  const unsigned long OPEN_FILE_MODE_READ = 0x0000;
+  const unsigned long OPEN_FILE_MODE_WRITE = 0x0001;
+
+  unsigned long openFile(in DOMString aPath,
+                         in unsigned long aMode,
+                         in nsIVirtualFileSystemCallback callback);
+
+  unsigned long closeFile(in unsigned long aOpenFileId,
+                          in nsIVirtualFileSystemCallback callback);
+
+  unsigned long getMetadata(in DOMString aEntryPath,
+                            in nsIVirtualFileSystemCallback callback);
+
+  unsigned long readDirectory(in DOMString aDirPath,
+                              in nsIVirtualFileSystemCallback callback);
+
   unsigned long readFile(in unsigned long aOpenFileId,
                          in unsigned long long aOffset,
-                         in unsigned long long aLength);
-  unsigned long unmount();
+                         in unsigned long long aLength,
+                         in nsIVirtualFileSystemCallback callback);
 
-  void onRequestSuccess(in unsigned long aRequestId,
-                        in nsIVirtualFileSystemRequestValue aValue);
-  void onOpenFileSuccess(in unsigned long aRequestId,
-                         in nsIVirtualFileSystemRequestValue aValue,
-                         in nsIVirtualFileSystemOpenedFileInfo aFileInfo);
-  void onCloseFileSuccess(in unsigned long aRequestId,
-                          in nsIVirtualFileSystemRequestValue aValue,
-                          in unsigned long aOpenedFileId);
-  void onRequestError(in unsigned long aRequestId, in unsigned long aError);
+  unsigned long unmount(in nsIVirtualFileSystemCallback callback);
 };

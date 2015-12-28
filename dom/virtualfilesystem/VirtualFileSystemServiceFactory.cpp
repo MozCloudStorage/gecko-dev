@@ -4,13 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/dom/virtualfilesystem/FakeVirtualFileSystemService.h"
-#include "mozilla/dom/VirtualFileSystemIPCService.h"
-#include "VirtualFileSystemServiceFactory.h"
-
-#ifdef MOZ_WIDGET_GONK
+#include "mozilla/dom/virtualfilesystem/VirtualFileSystemIPCService.h"
 #include "nsVirtualFileSystemService.h"
-#endif
+#include "VirtualFileSystemServiceFactory.h"
 
 namespace mozilla {
 namespace dom {
@@ -24,16 +20,11 @@ VirtualFileSystemServiceFactory::AutoCreateVirtualFileSystemService()
   RefPtr<BaseVirtualFileSystemService> service;
   if (!XRE_IsParentProcess()) {
     service =
-      virtualfilesystem::VirtualFileSystemIPCService::GetSingleton();
+      VirtualFileSystemIPCService::GetSingleton();
   }
   else {
-  #ifdef MOZ_WIDGET_GONK
     service =
-      virtualfilesystem::nsVirtualFileSystemService::GetSingleton();
-  #else
-    service =
-      virtualfilesystem::FakeVirtualFileSystemService::GetSingleton();
-  #endif
+      nsVirtualFileSystemService::GetSingleton();
   }
 
   return service.forget();

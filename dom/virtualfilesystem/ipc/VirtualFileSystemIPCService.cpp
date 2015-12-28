@@ -8,7 +8,6 @@
 #include "mozilla/dom/ContentChild.h"
 #include "nsIMutableArray.h"
 #include "nsIVirtualFileSystemCallback.h"
-#include "nsVirtualFileSystemDataType.h"
 #include "VirtualFileSystemChild.h"
 #include "VirtualFileSystemIPCService.h"
 
@@ -21,6 +20,21 @@ namespace {
 VirtualFileSystemChild* gVirtualFileSystemChild;
 
 } // anonymous
+
+StaticRefPtr<VirtualFileSystemIPCService>
+VirtualFileSystemIPCService::sSingleton;
+
+/* static */ already_AddRefed<VirtualFileSystemIPCService>
+VirtualFileSystemIPCService::GetSingleton()
+{
+  if (!sSingleton) {
+    sSingleton = new VirtualFileSystemIPCService();
+    ClearOnShutdown(&sSingleton);
+  }
+
+  RefPtr<VirtualFileSystemIPCService> service = sSingleton.get();
+  return service.forget();
+}
 
 VirtualFileSystemIPCService::VirtualFileSystemIPCService()
 {
@@ -57,7 +71,9 @@ VirtualFileSystemIPCService::Mount(uint32_t aRequestId,
   }
 
   uint32_t errorCode;
-  if (!MountInternal(aOptions, aRequestManager, &errorCode)) {
+  RefPtr<FileSystemInfoWrapper> info =
+    MountInternal(aOptions, aRequestManager, &errorCode);
+  if (!info) {
     aCallback->OnError(aRequestId, errorCode);
     return NS_ERROR_FAILURE;
   }
@@ -100,44 +116,6 @@ VirtualFileSystemIPCService::Unmount(
   }
 
   mMountUnmountCallbackMap[aRequestId] = aCallback;
-  return NS_OK;
-}
-
-nsresult
-VirtualFileSystemIPCService::GetVirtualFileSystemById(const nsAString& aFileSystemId,
-                                                      nsIVirtualFileSystemInfo** aInfo)
-{
-  uint32_t index;
-  if (!FindVirtualFileSystemById(aFileSystemId, index)) {
-    *aInfo = nullptr;
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  RefPtr<VirtualFileSystem> fileSystem = mVirtualFileSystems[index];
-
-  nsCOMPtr<nsIVirtualFileSystemInfo> info = fileSystem->ConvertToVirtualFileSystemInfo();
-  info.forget(aInfo);
-
-  return NS_OK;
-}
-
-nsresult
-VirtualFileSystemIPCService::GetAllVirtualFileSystem(nsIArray** aFileSystems)
-{
-  nsresult rv;
-  nsCOMPtr<nsIMutableArray> fileSystemArray = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return rv;
-  }
-
-  for (const auto& fileSystem : mVirtualFileSystems) {
-    nsCOMPtr<nsIVirtualFileSystemInfo> info;
-    if (NS_SUCCEEDED(GetVirtualFileSystemById(fileSystem->FileSystemId(),
-                                              getter_AddRefs(info)))) {
-      fileSystemArray->AppendElement(info, false);
-    }
-  }
-  fileSystemArray.forget(aFileSystems);
   return NS_OK;
 }
 

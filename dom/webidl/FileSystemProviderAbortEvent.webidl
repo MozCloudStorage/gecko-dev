@@ -8,7 +8,7 @@
  */
 
 // Options for FileSystemProviderAbortEvent.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface AbortRequestedOptions : FileSystemProviderRequestedOptions {
   // An ID of the request to be aborted.
   readonly attribute unsigned long operationRequestId;
@@ -21,7 +21,7 @@ interface AbortRequestedOptions : FileSystemProviderRequestedOptions {
 // errorCallback must be called. Note, that callbacks of the
 // aborted operation must not be called, as they will be ignored. Despite
 // calling errorCallback, the request may be forcibly aborted.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderAbortEvent : FileSystemProviderEvent {
   readonly attribute AbortRequestedOptions options;
   void successCallback();

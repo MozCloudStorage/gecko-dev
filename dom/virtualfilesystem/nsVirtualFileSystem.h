@@ -8,16 +8,46 @@
 #include "nsString.h"
 #include "nsCOMPtr.h"
 #include "nsTArray.h"
-#include "nsIVirtualFileSystemService.h"
 #include "nsIVirtualFileSystem.h"
-#include "nsIVirtualFileSystemCallback.h"
-#include "nsIVirtualFileSystemRequestManager.h"
-#include "nsIVirtualFileSystemResponseHandler.h"
-#include "nsIVirtualFileSystemDataType.h"
 
 namespace mozilla {
 namespace dom {
+
+struct FileSystemInfo;
+struct MountOptions;
+struct OpenedFile;
+
 namespace virtualfilesystem {
+
+class nsVirtualFileSystemRequestManager;
+class nsVirtualFileSystem;
+
+class FileSystemInfoWrapper final
+{
+public:
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(FileSystemInfoWrapper)
+
+  FileSystemInfoWrapper(const MountOptions& aOptions);
+
+  void GetFileSystemInfo(FileSystemInfo &aInfo) const;
+
+  const nsString& FileSystemId() const;
+
+  bool Writable() const;
+
+  uint32_t OpenedFilesLimit() const;
+
+  uint32_t OpenedFilesCount() const;
+
+  void AppendOpenedFile(const OpenedFile& aFile);
+
+  void RemoveOpenedFile(uint32_t aOpenRequestId);
+
+private:
+  virtual ~FileSystemInfoWrapper() = default;
+
+  FileSystemInfo mFileSystemInfo;
+};
 
 class nsVirtualFileSystem final : public nsIVirtualFileSystem
 {
@@ -25,26 +55,14 @@ public:
   NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIVIRTUALFILESYSTEM
 
-  nsVirtualFileSystem();
-
-  const char* FileSystemIdStr();
-  const char* DisplayNameStr();
-  const char* MountPointStr();
-  const bool IsWritable();
-  const nsString GetFileSystemId();
-  const nsString GetMountPoint();
-
-  void SetInfo(nsIVirtualFileSystemInfo* aInfo);
-  void SetResponseHandler(nsIVirtualFileSystemResponseHandler* aResponseHandler);
-  void SetRequestManager(nsIVirtualFileSystemRequestManager* aRequestManager);
+  nsVirtualFileSystem(FileSystemInfoWrapper* aFileSysetmInfo,
+                      nsVirtualFileSystemRequestManager* aRequestManager);
 
 private:
-  ~nsVirtualFileSystem() = default;
+  virtual ~nsVirtualFileSystem() = default;
 
-  RefPtr<nsIVirtualFileSystemInfo> mInfo;
-  RefPtr<nsIVirtualFileSystemRequestManager> mRequestManager;
-  RefPtr<nsIVirtualFileSystemResponseHandler> mResponseHandler;
-  nsString mMountPoint;
+  RefPtr<FileSystemInfoWrapper> mFileSystemInfo;
+  RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
 };
 
 } // end namespace virtualfilesystem

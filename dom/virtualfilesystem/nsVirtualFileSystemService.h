@@ -1,55 +1,93 @@
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_nsvirtualfilesystemservice_h__
-#define mozilla_dom_nsvirtualfilesystemservice_h__
+#ifndef mozilla_dom_nsVirtualFileSystemService_h
+#define mozilla_dom_nsVirtualFileSystemService_h
 
+#include <map>
 #include "mozilla/StaticPtr.h"
-#include "mozilla/Monitor.h"
-#include "nsCOMPtr.h"
+#include "nsIVirtualFileSystemService.h"
 #include "nsString.h"
 #include "nsTArray.h"
-#include "nsIVirtualFileSystemService.h"
-#include "nsIVirtualFileSystem.h"
+
+class nsIVirtualFileSystemCallback;
 
 namespace mozilla {
 namespace dom {
+
+struct FileSystemInfo;
+struct MountOptions;
+struct UnmountOptions;
+
 namespace virtualfilesystem {
 
-/**
- *  nsVirtualFileSystemService
- *  The implementation of nsIVirtualFileSystemService. It is used to manage
- *  virtual file system in the Gecko.
- */
+class FileSystemInfoWrapper;
+class nsVirtualFileSystemRequestManager;
 
-class nsVirtualFileSystemService final : public nsIVirtualFileSystemService
-{
+class BaseVirtualFileSystemService : public nsISupports {
 public:
-  NS_DECL_THREADSAFE_ISUPPORTS
-  NS_DECL_NSIVIRTUALFILESYSTEMSERVICE
+  NS_DECL_ISUPPORTS
 
-  typedef nsTArray<RefPtr<nsIVirtualFileSystem>> VirtualFileSystemArray;
+  virtual nsresult Mount(uint32_t aRequestId,
+                         const MountOptions& aOptions,
+                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         nsIVirtualFileSystemCallback* aCallback) = 0;
 
-public:
-  static already_AddRefed<nsVirtualFileSystemService> GetSingleton();
+  virtual nsresult Unmount(uint32_t aRequestId,
+                           const UnmountOptions& aOptions,
+                           nsIVirtualFileSystemCallback* aCallback) = 0;
 
-  nsVirtualFileSystemService();
+  nsresult GetFileSysetmInfoById(const nsAString& aFileSystemId, FileSystemInfo& aInfo);
 
-  already_AddRefed<nsIVirtualFileSystem>
-         FindVirtualFileSystemById(const nsAString& aName);
+  void GetAllFileSystemInfo(nsTArray<FileSystemInfo>& aArray);
 
-  static nsString CreateMountPoint(const nsAString& aFileSystemId);
-private:
-  ~nsVirtualFileSystemService();
+protected:
+  BaseVirtualFileSystemService() = default;
+  virtual ~BaseVirtualFileSystemService() = default;
 
-private:
-  Monitor mArrayMonitor;
-  VirtualFileSystemArray mVirtualFileSystemArray;
-  static StaticRefPtr<nsVirtualFileSystemService> sService;
+  bool FindFileSystemInfoById(const nsAString& aFileSystemId, uint32_t& aIndex);
+  already_AddRefed<FileSystemInfoWrapper>
+  MountInternal(const MountOptions& aOptions,
+                nsVirtualFileSystemRequestManager* aRequestManager,
+                uint32_t* aErrorCode);
+  bool UnmountInternal(const UnmountOptions& aOptions,
+                       uint32_t* aErrorCode);
+
+  nsTArray<RefPtr<FileSystemInfoWrapper>> mVirtualFileSystems;
 };
 
-} // end namespace virtualfilesystem
-} // end namespace dom
-} // end namespace mozilla
-#endif
+class nsVirtualFileSystemService final
+  : public nsIVirtualFileSystemService
+  , public BaseVirtualFileSystemService
+{
+public:
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_NSIVIRTUALFILESYSTEMSERVICE
+
+  static already_AddRefed<nsVirtualFileSystemService> GetSingleton();
+
+  virtual nsresult Mount(uint32_t aRequestId,
+                         const MountOptions& aOptions,
+                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         nsIVirtualFileSystemCallback* aCallback) override;
+  virtual nsresult Unmount(uint32_t aRequestId,
+                           const UnmountOptions& aOptions,
+                           nsIVirtualFileSystemCallback* aCallback) override;
+
+private:
+  nsVirtualFileSystemService() = default;
+  virtual ~nsVirtualFileSystemService() = default;
+
+  static StaticRefPtr<nsVirtualFileSystemService> sSingleton;
+  typedef std::map<nsString, nsCOMPtr<nsIVirtualFileSystem>> VirtualFileSystemMapType;
+  VirtualFileSystemMapType mVirtualFileSystemMap;
+};
+
+} // namespace virtualfilesystem
+} // namespace dom
+} // namespace mozilla
+
+#endif // mozilla_dom_nsVirtualFileSystemService_h

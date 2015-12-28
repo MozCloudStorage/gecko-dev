@@ -15,6 +15,25 @@ namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
+class nsEntryMetadata final : public nsIEntryMetadata
+{
+public:
+  NS_DECL_THREADSAFE_ISUPPORTS
+  NS_DECL_NSIENTRYMETADATA
+
+  explicit nsEntryMetadata() = default;
+  static already_AddRefed<nsIEntryMetadata> FromEntryMetadata(const EntryMetadata& data);
+
+private:
+  virtual ~nsEntryMetadata() = default;
+
+  bool mIsDirectory;
+  nsString mName;
+  uint64_t mSize;
+  DOMTimeStamp mModificationTime;
+  nsString mMimeType;
+};
+
 class nsVirtualFileSystemGetMetadataRequestValue final
   : public nsIVirtualFileSystemGetMetadataRequestValue
 {

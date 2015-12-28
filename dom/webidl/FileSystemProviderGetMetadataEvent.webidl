@@ -8,7 +8,7 @@
  */
 
 // Options for the FileSystemProviderGetMetadataEvent.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface GetMetadataRequestedOptions : FileSystemProviderRequestedOptions {
   // The path of the entry to fetch metadata about.
   readonly attribute DOMString entryPath;
@@ -37,7 +37,7 @@ dictionary EntryMetadata {
 // is requested. The metadata must be returned with the
 // successCallback call. In case of an error,
 // errorCallback must be called.
-[Pref="device.storage.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderGetMetadataEvent : FileSystemProviderEvent {
   readonly attribute GetMetadataRequestedOptions options;
   void successCallback(EntryMetadata metadata);
