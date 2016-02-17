@@ -6,7 +6,7 @@
 
 include protocol PContent;
 include protocol PVirtualFileSystemRequest;
-include "mozilla/dom/FileSystemProvider.h";
+include "mozilla/dom/FileSystemProviderCommon.h";
 
 using struct mozilla::dom::MountOptions from "mozilla/dom/FileSystemProviderBinding.h";
 using struct mozilla::dom::UnmountOptions from "mozilla/dom/FileSystemProviderBinding.h";
@@ -71,7 +71,6 @@ sync protocol PVirtualFileSystem
 child:
   NotifyMountUnmountResult(uint32_t requestId, bool succeeded);
   PVirtualFileSystemRequest(uint32_t requestId,
-                            uint32_t requestType,
                             nsString fileSystemId,
                             VirtualFileSystemIPCRequestedOptions options);
 

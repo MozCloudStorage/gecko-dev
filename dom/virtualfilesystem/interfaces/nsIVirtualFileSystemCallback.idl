@@ -83,7 +83,7 @@ interface nsIVirtualFileSystemCallback : nsISupports
   const unsigned long ERROR_NOT_A_FILE = 0x000C;
   const unsigned long ERROR_NOT_EMPTY = 0x000D;
   const unsigned long ERROR_INVALID_URL = 0x000E;
-  const unsigned long ERROR_TIME_OUT = 0xFFFF;
+  const unsigned long ERROR_TIME_OUT = 0x000F;
 
   /**
    * Called when a request succeeds.

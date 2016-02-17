@@ -8,13 +8,13 @@
  */
 
 // Options for FileSystemProviderUnmountEvent.
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface UnmountRequestedOptions : FileSystemProviderRequestedOptions {
 };
 
 // Raised when unmounting for the file system with the
 // fileSystemId identifier is requested.
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderUnmountEvent : FileSystemProviderEvent {
   readonly attribute UnmountRequestedOptions options;
   void successCallback();

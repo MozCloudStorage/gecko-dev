@@ -69,7 +69,7 @@ dictionary FileSystemInfo {
   sequence<OpenedFile> openedFiles;
 };
 
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProvider : EventTarget {
   // Mounts a file system with the given fileSystemId and displayName.
   [Throws]

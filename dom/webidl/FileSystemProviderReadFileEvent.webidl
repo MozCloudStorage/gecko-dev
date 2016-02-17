@@ -8,7 +8,7 @@
  */
 
 // Options for FileSystemProviderReadFileEvent.
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface ReadFileRequestedOptions : FileSystemProviderRequestedOptions {
   // A request ID used to open the file.
   readonly attribute unsigned long openRequestId;
@@ -24,7 +24,7 @@ interface ReadFileRequestedOptions : FileSystemProviderRequestedOptions {
 // openRequestId is requested. The results must be returned in
 // chunks by calling successCallback several times. In case of
 // an error, errorCallback must be called.
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderReadFileEvent : FileSystemProviderEvent {
   readonly attribute ReadFileRequestedOptions options;
 

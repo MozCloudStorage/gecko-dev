@@ -8,7 +8,7 @@
  */
 
 // Options for FileSystemProviderOpenFileEvent.
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface OpenFileRequestedOptions : FileSystemProviderRequestedOptions {
   // The path of the file to be opened.
   readonly attribute DOMString filePath;
@@ -20,7 +20,7 @@ interface OpenFileRequestedOptions : FileSystemProviderRequestedOptions {
 // Raised when opening a file at filePath is requested. If the
 // file does not exist, then the operation must fail. Maximum number of
 // files opened at once can be specified with MountOptions.
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderOpenFileEvent : FileSystemProviderEvent {
   readonly attribute OpenFileRequestedOptions options;
   void successCallback();

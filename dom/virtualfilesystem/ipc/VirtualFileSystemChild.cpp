@@ -4,8 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/dom/FileSystemProviderCommon.h"
 #include "mozilla/dom/virtualfilesystem/VirtualFileSystemIPCService.h"
-#include "nsVirtualFileSystemRequestManager.h"
+#include "mozilla/unused.h"
+#include "nsMemory.h"
 #include "VirtualFileSystemChild.h"
 
 namespace mozilla {
@@ -27,6 +29,7 @@ VirtualFileSystemChild::~VirtualFileSystemChild()
     Send__delete__(this);
   }
   mService = nullptr;
+  mEventDispatcherMap.clear();
 }
 
 bool
@@ -42,13 +45,12 @@ VirtualFileSystemChild::RecvNotifyMountUnmountResult(const uint32_t& aRequestId,
 PVirtualFileSystemRequestChild*
 VirtualFileSystemChild::AllocPVirtualFileSystemRequestChild(
   const uint32_t& aRequestId,
-  const uint32_t& aRequestType,
   const nsString& aFileSystemId,
   const VirtualFileSystemIPCRequestedOptions& aOptions)
 {
   RefPtr<VirtualFileSystemRequestChild> actor =
-    new VirtualFileSystemRequestChild(mService);
-  return actor.forget().take();;
+    new VirtualFileSystemRequestChild(aOptions.type());
+  return actor.forget().take();
 }
 
 bool
@@ -72,88 +74,204 @@ bool
 VirtualFileSystemChild::RecvPVirtualFileSystemRequestConstructor(
   PVirtualFileSystemRequestChild* aActor,
   const uint32_t& aRequestId,
-  const uint32_t& aRequestType,
   const nsString& aFileSystemId,
   const VirtualFileSystemIPCRequestedOptions& aOptions)
 {
   MOZ_ASSERT(mService);
 
-  /*PVirtualFileSystemRequestChild* actor =
-    static_cast<VirtualFileSystemRequestChild*>(aActor);
-
-  nsCOMPtr<nsIVirtualFileSystemRequestManager> manager;
-  if (NS_FAILED(mService->GetRequestManagerById(aFileSystemId,
-                                                getter_AddRefs(manager)))) {
+  nsString fileSystemId = nsString(aFileSystemId);
+  EventDispatcherMapType::iterator it =
+    mEventDispatcherMap.find(fileSystemId);
+  if (it == mEventDispatcherMap.end()) {
     return false;
   }
 
-  switch (aOptions.type()) {
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemAbortRequestedOptions:
-    {
-      VirtualFileSystemAbortRequestedOptions options = aOptions;
-      nsCOMPtr<nsIVirtualFileSystemAbortRequestedOptions> options =
-        do_CreateInstance(VIRTUAL_FILE_SYSTEM_ABORT_REQUESTED_OPTIONS_CONTRACT_ID);
-      options->SetFileSystemId(aFileSystemId);
-      options->SetOperationRequestId(options.operationRequestId());
+  auto actor = static_cast<VirtualFileSystemRequestChild*>(aActor);
+  if (NS_FAILED(it->second->DispatchFileSystemProviderEvent(aRequestId,
+                                                            aFileSystemId,
+                                                            aOptions,
+                                                            actor))) {
+    return false;
+  }
 
-      break;
-    }
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemGetMetadataRequestedOptions:
-    {
-      break;
-    }
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemCloseFileRequestedOptions:
-    {
-      break;
-    }
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemOpenFileRequestedOptions:
-    {
-      break;
-    }
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadDirectoryRequestedOptions:
-    {
-      break;
-    }
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadFileRequestedOptions:
-    {
-      break;
-    }
-    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemUnmountRequestedOptions:
-    {
-      break;
-    }
-    default:
-      NS_RUNTIMEABORT("not reached");
-      break;
-  }*/
   return true;
 }
 
-NS_IMPL_ISUPPORTS0(VirtualFileSystemRequestChild)
-
-VirtualFileSystemRequestChild::VirtualFileSystemRequestChild(
-  VirtualFileSystemIPCService* aService)
-  : mService(aService)
+void
+VirtualFileSystemChild::RegisterEventDispatcher(
+  const nsAString& aFileSystemId,
+  BaseFileSystemProviderEventDispatcher* aDispatcher)
 {
-  MOZ_COUNT_CTOR(VirtualFileSystemRequestChild);
+  if (mActorDestroyed) {
+    return;
+  }
+
+  nsString fileSystemId = nsString(aFileSystemId);
+  EventDispatcherMapType::iterator it =
+    mEventDispatcherMap.find(fileSystemId);
+  if (it == mEventDispatcherMap.end()) {
+    mEventDispatcherMap[fileSystemId] = aDispatcher;
+  }
 }
 
-VirtualFileSystemRequestChild::~VirtualFileSystemRequestChild()
+void
+VirtualFileSystemChild::UnregisterEventDispatcher(
+  const nsAString& aFileSystemId)
 {
-  MOZ_COUNT_DTOR(VirtualFileSystemRequestChild);
-}
+  if (mActorDestroyed) {
+    return;
+  }
 
-bool
-VirtualFileSystemRequestChild::Recv__delete__(
-  const VirtualFileSystemResponseValue& aResponse)
-{
-  return true;
+  nsString fileSystemId = nsString(aFileSystemId);
+  mEventDispatcherMap.erase(fileSystemId);
 }
 
 void
 VirtualFileSystemRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 {
-  mService = nullptr;
+  mActorDestroyed = true;
+}
+
+nsresult
+VirtualFileSystemRequestChild::CreateRequest(
+  const nsAString& aFileSystemId,
+  const VirtualFileSystemIPCRequestedOptions& aOptions,
+  nsIVirtualFileSystemCallback* aCallback,
+  uint32_t* aRequestId)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+namespace {
+
+  void ConvertToEntryMetadata(nsIEntryMetadata* aMetaData,
+                              EntryMetadata& aResult)
+  {
+    if (!aMetaData) {
+      return;
+    }
+
+    bool isDirectory;
+    nsString name;
+    uint64_t size;
+    DOMTimeStamp modificationTime;
+    nsString mimeType;
+    aMetaData->GetIsDirectory(&isDirectory);
+    aMetaData->GetName(name);
+    aMetaData->GetSize(&size);
+    aMetaData->GetModificationTime(&modificationTime);
+    aMetaData->GetMimeType(mimeType);
+
+    aResult.mIsDirectory = isDirectory;
+    aResult.mModificationTime = modificationTime;
+    aResult.mName = name;
+    aResult.mSize = size;
+    aResult.mMimeType.Construct(mimeType);
+  }
+
+} // anonymous namespace
+
+nsresult
+VirtualFileSystemRequestChild::FufillRequest(
+  uint32_t aRequestId,
+  nsIVirtualFileSystemRequestValue* aValue,
+  bool aHasMore)
+{
+  if (mActorDestroyed) {
+    return NS_ERROR_FAILURE;
+  }
+
+  switch (mType) {
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemAbortRequestedOptions:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemCloseFileRequestedOptions:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemOpenFileRequestedOptions:
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemUnmountRequestedOptions:
+    {
+      VirtualFileSystemSuccessResponse response;
+      Unused << SendResponseData(aRequestId, response);
+    }
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemGetMetadataRequestedOptions:
+    {
+      nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestValue> value =
+        do_QueryInterface(aValue);
+      if (!value) {
+        return NS_ERROR_FAILURE;
+      }
+
+      nsCOMPtr<nsIEntryMetadata> metadata;
+      value->GetMetadata(getter_AddRefs(metadata));
+      EntryMetadata result;
+      ConvertToEntryMetadata(metadata, result);
+
+      VirtualFileSystemGetMetadataResponse response(result, aHasMore);
+      Unused << SendResponseData(aRequestId, response);
+    }
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadDirectoryRequestedOptions:
+    {
+      nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestValue> value =
+        do_QueryInterface(aValue);
+      if (!value) {
+        return NS_ERROR_FAILURE;
+      }
+
+      uint32_t length;
+      nsIEntryMetadata** entries;
+      nsresult rv = value->GetEntries(&length, &entries);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+
+      nsTArray<EntryMetadata> metadataArray;
+      for (uint32_t i = 0; i < length; i++) {
+        EntryMetadata result;
+        ConvertToEntryMetadata(entries[i], result);
+        metadataArray.AppendElement(result);
+      }
+      NS_FREE_XPCOM_ISUPPORTS_POINTER_ARRAY(length, entries);
+
+      VirtualFileSystemReadDirectoryResponse response(metadataArray, aHasMore);
+      Unused << SendResponseData(aRequestId, response);
+      break;
+    }
+    case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadFileRequestedOptions:
+    {
+      nsCOMPtr<nsIVirtualFileSystemReadFileRequestValue> value =
+        do_QueryInterface(aValue);
+      if (!value) {
+        return NS_ERROR_FAILURE;
+      }
+
+      nsAutoCString data;
+      value->GetData(data);
+      VirtualFileSystemReadFileResponse response(data, aHasMore);
+      Unused << SendResponseData(aRequestId, response);
+      break;
+    }
+    default:
+       MOZ_ASSERT_UNREACHABLE("unexpected options type");
+      return NS_ERROR_UNEXPECTED;
+  }
+
+  if (!aHasMore) {
+    Unused << Send__delete__(this);
+  }
+
+  return NS_OK;
+}
+
+nsresult
+VirtualFileSystemRequestChild::RejectRequest(
+  uint32_t aRequestId,
+  uint32_t aErrorCode)
+{
+  if (mActorDestroyed) {
+    return NS_ERROR_FAILURE;
+  }
+
+  VirtualFileSystemErrorResponse response(aErrorCode);
+  Unused << SendResponseData(aRequestId, response);
+  Unused << Send__delete__(this);
+  return NS_OK;
 }
 
 } // namespace virtualfilesystem

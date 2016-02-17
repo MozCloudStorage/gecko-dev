@@ -6,7 +6,6 @@
 #include "mozilla/dom/TypedArray.h"
 #include "mozilla/Move.h"
 #include "mozilla/mozalloc.h"
-#include "nsArrayUtils.h"
 #include "nsVirtualFileSystemRequestValue.h"
 #include "nsComponentManagerUtils.h"
 #include "nsMemory.h"
@@ -17,6 +16,17 @@ namespace dom {
 namespace virtualfilesystem {
 
 NS_IMPL_ISUPPORTS(nsEntryMetadata, nsIEntryMetadata)
+
+nsEntryMetadata::nsEntryMetadata(const EntryMetadata& aData)
+{
+  mIsDirectory = aData.mIsDirectory;
+  mName = aData.mName;
+  mSize = aData.mSize;
+  mModificationTime = aData.mModificationTime;
+  if (aData.mMimeType.WasPassed() && !aData.mMimeType.Value().IsEmpty()) {
+    mMimeType = aData.mMimeType.Value();
+  }
+}
 
 NS_IMETHODIMP
 nsEntryMetadata::GetIsDirectory(bool* aIsDirectory)
@@ -100,38 +110,21 @@ nsEntryMetadata::SetMimeType(const nsAString& aMimeType)
   return NS_OK;
 }
 
-/* static */ already_AddRefed<nsIEntryMetadata>
-nsEntryMetadata::FromEntryMetadata(const EntryMetadata& aData)
-{
-  nsCOMPtr<nsIEntryMetadata> data = new nsEntryMetadata();
-  data->SetIsDirectory(aData.mIsDirectory);
-  data->SetName(aData.mName);
-  data->SetSize(aData.mSize);
-  data->SetModificationTime(aData.mModificationTime);
-  if (aData.mMimeType.WasPassed() && !aData.mMimeType.Value().IsEmpty()) {
-    data->SetMimeType(aData.mMimeType.Value());
-  }
-  return data.forget();
-}
-
 NS_IMPL_ISUPPORTS(nsVirtualFileSystemGetMetadataRequestValue,
                   nsIVirtualFileSystemRequestValue,
                   nsIVirtualFileSystemGetMetadataRequestValue)
 
 nsVirtualFileSystemGetMetadataRequestValue::nsVirtualFileSystemGetMetadataRequestValue(
   const EntryMetadata& aData)
+  : mMetadata(new nsEntryMetadata(aData))
 {
-  nsCOMPtr<nsIEntryMetadata> metadata =
-    nsEntryMetadata::FromEntryMetadata(aData);
-
-  mMetadata = metadata;
 }
 
 NS_IMETHODIMP
 nsVirtualFileSystemGetMetadataRequestValue::GetMetadata(nsIEntryMetadata** aMetadata)
 {
   if (NS_WARN_IF(!aMetadata)) {
-    return NS_ERROR_INVALID_POINTER;
+    return NS_ERROR_INVALID_ARG;
   }
 
   nsCOMPtr<nsIEntryMetadata> data = mMetadata;
@@ -150,9 +143,11 @@ NS_IMPL_ISUPPORTS(nsVirtualFileSystemReadDirectoryRequestValue,
                   nsIVirtualFileSystemReadDirectoryRequestValue)
 
 nsVirtualFileSystemReadDirectoryRequestValue::nsVirtualFileSystemReadDirectoryRequestValue(
-  nsTArray<nsCOMPtr<nsIEntryMetadata>>&& aArray)
-  : mEntries(Move(aArray))
+  const nsTArray<EntryMetadata>& aArray)
 {
+  for (const auto& iter : aArray) {
+    mEntries.AppendElement(new nsEntryMetadata(iter));
+  }
 }
 
 NS_IMETHODIMP
@@ -231,7 +226,7 @@ nsVirtualFileSystemReadFileRequestValue::nsVirtualFileSystemReadFileRequestValue
 }
 
 NS_IMETHODIMP
-nsVirtualFileSystemReadFileRequestValue::GetData(nsACString & aData)
+nsVirtualFileSystemReadFileRequestValue::GetData(nsACString& aData)
 {
   aData.Assign(mData);
   return NS_OK;

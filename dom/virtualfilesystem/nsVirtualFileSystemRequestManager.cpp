@@ -3,8 +3,9 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include <algorithm>
-#include "mozilla/dom/FileSystemProvider.h"
 #include "mozilla/dom/virtualfilesystem/PVirtualFileSystem.h"
+#include "mozilla/Preferences.h"
+#include "nsComponentManagerUtils.h"
 #include "nsIVirtualFileSystemCallback.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "nsQueryObject.h"
@@ -14,83 +15,85 @@ namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
-class RunVirtualFileSystemSuccessCallback : public nsRunnable
-{
-public:
-  explicit RunVirtualFileSystemSuccessCallback(nsIVirtualFileSystemCallback* aCallback,
-                                               uint32_t aRequestId,
-                                               nsIVirtualFileSystemRequestValue* aValue,
-                                               bool aHasMore)
-    : mCallback(aCallback)
-    , mRequestId(aRequestId)
-    , mValue(aValue)
-    , mHasMore(aHasMore)
-  {}
+namespace {
 
-  NS_IMETHOD Run()
-  {
-    mCallback->OnSuccess(mRequestId, mValue, mHasMore);
-    return NS_OK;
+uint32_t RequestTimeoutValue()
+{
+  const uint32_t kDefaultTimeoutValue = 30000;
+  static uint32_t sRequestTimeoutValue = kDefaultTimeoutValue;
+  static bool sRequestTimeoutValueInitialized = false;
+
+  if (!sRequestTimeoutValueInitialized) {
+    sRequestTimeoutValueInitialized = true;
+    Preferences::AddUintVarCache(&sRequestTimeoutValue,
+                                 "dom.filesystemprovider.request_timeout",
+                                 kDefaultTimeoutValue);
   }
 
-private:
-  nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
-  uint32_t mRequestId;
-  nsCOMPtr<nsIVirtualFileSystemRequestValue> mValue;
-  bool mHasMore;
-};
+  return sRequestTimeoutValue;
+}
 
-class RunVirtualFileSystemErrorCallback : public nsRunnable
-{
-public:
-  explicit RunVirtualFileSystemErrorCallback(nsIVirtualFileSystemCallback* aCallback,
-                                             uint32_t aRequestId,
-                                             uint32_t aErrorCode)
-    : mCallback(aCallback)
-    , mRequestId(aRequestId)
-    , mErrorCode(aErrorCode)
-  {}
+} // anonymous namespace
 
-  NS_IMETHOD Run()
-  {
-    mCallback->OnError(mRequestId, mErrorCode);
-    return NS_OK;
-  }
-
-private:
-  nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
-  uint32_t mRequestId;
-  uint32_t mErrorCode;
-};
-
-NS_IMPL_ISUPPORTS0(nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest)
+NS_IMPL_ISUPPORTS(nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest,
+                  nsITimerCallback)
 
 nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest
   ::nsVirtualFileSystemRequest(uint32_t aRequestId,
-                               nsIVirtualFileSystemCallback* aCallback)
+                               nsIVirtualFileSystemCallback* aCallback,
+                               nsVirtualFileSystemRequestManager* aManager)
   : mRequestId(aRequestId)
   , mCallback(aCallback)
   , mIsCompleted(false)
+  , mManager(aManager)
 {
 }
 
-NS_IMPL_CYCLE_COLLECTION_CLASS(nsVirtualFileSystemRequestManager)
+nsresult
+nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest::StartTimer()
+{
+  if (mTimer) {
+    return NS_OK;
+  }
 
-NS_IMPL_CYCLE_COLLECTING_ADDREF(nsVirtualFileSystemRequestManager)
-NS_IMPL_CYCLE_COLLECTING_RELEASE(nsVirtualFileSystemRequestManager)
+  nsresult rv;
+  mTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
-NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsVirtualFileSystemRequestManager)
-NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+  rv = mTimer->InitWithCallback(this, RequestTimeoutValue(), nsITimer::TYPE_ONE_SHOT);
+  return rv;
+}
 
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsVirtualFileSystemRequestManager)
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest
+  ::~nsVirtualFileSystemRequest()
+{
+  if (mTimer) {
+    mTimer->Cancel();
+    mTimer = nullptr;
+  }
+}
 
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsVirtualFileSystemRequestManager)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
-NS_INTERFACE_MAP_END
+NS_IMETHODIMP
+nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequest
+  ::Notify(nsITimer* aTimer)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+
+  RefPtr<nsVirtualFileSystemRequest> self = this;
+  nsCOMPtr<nsIRunnable> r =
+    NS_NewRunnableFunction([self] () -> void {
+      self->mCallback->OnError(self->mRequestId,
+                               nsIVirtualFileSystemCallback::ERROR_TIME_OUT);
+      self->mManager->DestroyRequest(self->mRequestId);
+    });
+  NS_DispatchToCurrentThread(r);
+  return NS_OK;
+}
 
 nsVirtualFileSystemRequestManager::nsVirtualFileSystemRequestManager(
-  FileSystemProviderEventDispatcher* aEventDispatcher)
+  BaseFileSystemProviderEventDispatcher* aEventDispatcher)
   : mEventDispatcher(aEventDispatcher)
   , mRequestId(0)
 {
@@ -119,23 +122,26 @@ nsVirtualFileSystemRequestManager::CreateRequest(const nsAString& aFileSystemId,
   }
 
   RefPtr<nsVirtualFileSystemRequest> request =
-    new nsVirtualFileSystemRequest(++mRequestId, aCallback);
+    new nsVirtualFileSystemRequest(++mRequestId, aCallback, this);
   mRequestMap[mRequestId] = request;
-  mRequestIdQueue.push_back(mRequestId);
+  mRequestIdQueue.append(mRequestId);
 
-  printf_stderr("############### abort 3\n");
   RefPtr<nsVirtualFileSystemRequestManager> self = this;
   nsString fileSystemId(aFileSystemId);
   nsCOMPtr<nsIRunnable> dispatchTask =
-    NS_NewRunnableFunction([self, fileSystemId, aOptions] () -> void
-      {
-        printf_stderr("############### abort 4\n");
-        self->mEventDispatcher->DispatchFileSystemProviderEvent(self->mRequestId,
-                                                                fileSystemId,
-                                                                aOptions);
-      });
-    printf_stderr("############### abort 5\n");
+    NS_NewRunnableFunction([self, fileSystemId, aOptions] () -> void {
+      self->mEventDispatcher->DispatchFileSystemProviderEvent(self->mRequestId,
+                                                              fileSystemId,
+                                                              aOptions,
+                                                              self);
+    });
   nsresult rv = NS_DispatchToCurrentThread(dispatchTask);
+  if (NS_FAILED(rv)) {
+    DestroyRequest(mRequestId);
+    return rv;
+  }
+
+  rv = request->StartTimer();
   if (NS_FAILED(rv)) {
     DestroyRequest(mRequestId);
     return rv;
@@ -182,12 +188,11 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
     if (!req->mIsCompleted) {
       break;
     }
-    nsCOMPtr<nsIRunnable> callback =
-      new RunVirtualFileSystemSuccessCallback(req->mCallback,
-                                              req->mRequestId,
-                                              req->mValue,
-                                              false);
-    NS_DispatchToCurrentThread(callback);
+    nsCOMPtr<nsIRunnable> r =
+      NS_NewRunnableFunction([req] () -> void {
+        req->mCallback->OnSuccess(req->mRequestId, req->mValue, false);
+      });
+    NS_DispatchToCurrentThread(r);
     mRequestMap.erase(req->mRequestId);
     mRequestIdQueue.erase(it);
   }
@@ -196,7 +201,8 @@ nsVirtualFileSystemRequestManager::FufillRequest(uint32_t aRequestId,
 }
 
 nsresult
-nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t aErrorCode)
+nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId,
+                                                 uint32_t aErrorCode)
 {
   MOZ_ASSERT(NS_IsMainThread());
 
@@ -204,12 +210,12 @@ nsVirtualFileSystemRequestManager::RejectRequest(uint32_t aRequestId, uint32_t a
     return NS_ERROR_FAILURE;
   }
 
-  RefPtr<nsVirtualFileSystemRequest> request = mRequestMap[aRequestId];
-  nsCOMPtr<nsIRunnable> callback =
-    new RunVirtualFileSystemErrorCallback(request->mCallback,
-                                          aRequestId,
-                                          aErrorCode);
-  NS_DispatchToCurrentThread(callback);
+  RefPtr<nsVirtualFileSystemRequest> req = mRequestMap[aRequestId];
+  nsCOMPtr<nsIRunnable> r =
+    NS_NewRunnableFunction([req, aErrorCode] () -> void {
+      req->mCallback->OnError(req->mRequestId, aErrorCode);
+    });
+  NS_DispatchToCurrentThread(r);
   DestroyRequest(aRequestId);
   return NS_OK;
 }

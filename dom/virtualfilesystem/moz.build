@@ -12,6 +12,7 @@ EXPORTS.mozilla.dom += [
     'FileSystemProvider.h',
     'FileSystemProviderAbortEvent.h',
     'FileSystemProviderCloseFileEvent.h',
+    'FileSystemProviderCommon.h',
     'FileSystemProviderEvent.h',
     'FileSystemProviderGetMetadataEvent.h',
     'FileSystemProviderOpenFileEvent.h',
@@ -30,6 +31,7 @@ UNIFIED_SOURCES += [
     'FileSystemProvider.cpp',
     'FileSystemProviderAbortEvent.cpp',
     'FileSystemProviderCloseFileEvent.cpp',
+    'FileSystemProviderCommon.cpp',
     'FileSystemProviderEvent.cpp',
     'FileSystemProviderGetMetadataEvent.cpp',
     'FileSystemProviderOpenFileEvent.cpp',
@@ -55,7 +57,5 @@ IPDL_SOURCES += [
 include('/ipc/chromium/chromium-config.mozbuild')
 
 MOCHITEST_MANIFESTS += ['test/mochitest/mochitest.ini']
-
-XPCSHELL_TESTS_MANIFESTS += ['test/xpcshell/xpcshell.ini']
 
 FINAL_LIBRARY = 'xul'

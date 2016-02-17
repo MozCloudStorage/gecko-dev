@@ -19,7 +19,7 @@ struct OpenedFile;
 
 namespace virtualfilesystem {
 
-class nsVirtualFileSystemRequestManager;
+class BaseVirtualFileSystemRequestManager;
 class nsVirtualFileSystem;
 
 class FileSystemInfoWrapper final
@@ -56,13 +56,13 @@ public:
   NS_DECL_NSIVIRTUALFILESYSTEM
 
   nsVirtualFileSystem(FileSystemInfoWrapper* aFileSysetmInfo,
-                      nsVirtualFileSystemRequestManager* aRequestManager);
+                      BaseVirtualFileSystemRequestManager* aRequestManager);
 
 private:
   virtual ~nsVirtualFileSystem() = default;
 
   RefPtr<FileSystemInfoWrapper> mFileSystemInfo;
-  RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
+  RefPtr<BaseVirtualFileSystemRequestManager> mRequestManager;
 };
 
 } // end namespace virtualfilesystem

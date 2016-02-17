@@ -47,7 +47,7 @@ UnmountRequestedOptions::WrapObject(JSContext* aCx,
 
 FileSystemProviderUnmountEvent::FileSystemProviderUnmountEvent(
   EventTarget* aOwner,
-  nsVirtualFileSystemRequestManager* aManager)
+  BaseVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("unmountrequested"))
 {

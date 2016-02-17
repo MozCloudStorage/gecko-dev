@@ -56,7 +56,7 @@ AbortRequestedOptions::OperationRequestId() const
 
 FileSystemProviderAbortEvent::FileSystemProviderAbortEvent(
   EventTarget* aOwner,
-  nsVirtualFileSystemRequestManager* aManager)
+  BaseVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("abortrequested"))
 {

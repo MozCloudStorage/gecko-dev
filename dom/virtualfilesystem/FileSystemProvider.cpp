@@ -14,9 +14,7 @@
 #include "mozilla/dom/FileSystemProviderReadFileEvent.h"
 #include "mozilla/dom/FileSystemProviderUnmountEvent.h"
 #include "mozilla/dom/Promise.h"
-#include "mozilla/unused.h"
 #include "nsArrayUtils.h"
-#include "nsVirtualFileSystem.h"
 #include "nsVirtualFileSystemService.h"
 #include "nsVirtualFileSystemRequestManager.h"
 #include "VirtualFileSystemServiceFactory.h"
@@ -27,88 +25,18 @@ namespace dom {
 using virtualfilesystem::VirtualFileSystemServiceFactory;
 using virtualfilesystem::BaseVirtualFileSystemService;
 
-NS_IMPL_ISUPPORTS0(FileSystemProviderProxy)
-
-NS_IMPL_ISUPPORTS_INHERITED0(FileSystemProviderEventDispatcher,
-                             FileSystemProviderProxy)
-
 nsresult
 FileSystemProviderEventDispatcher::DispatchFileSystemProviderEvent(
   uint32_t aRequestId,
   const nsAString& aFileSystemId,
-  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions)
+  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions,
+  virtualfilesystem::BaseVirtualFileSystemRequestManager* aRequestManager)
 {
   return mFileSystemProvider->DispatchFileSystemProviderEventInternal(
     aRequestId,
     aFileSystemId,
-    aOptions);
-}
-
-class MountUnmountResultCallback final : public FileSystemProviderProxy
-                                       , public nsIVirtualFileSystemCallback
-{
-public:
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
-
-  explicit MountUnmountResultCallback(FileSystemProvider* aProvider)
-    : FileSystemProviderProxy(aProvider) {}
-
-private:
-  virtual ~MountUnmountResultCallback() {}
-};
-
-NS_IMPL_ISUPPORTS_INHERITED(MountUnmountResultCallback,
-                            FileSystemProviderProxy,
-                            nsIVirtualFileSystemCallback)
-
-NS_IMETHODIMP
-MountUnmountResultCallback::OnSuccess(uint32_t aRequestId,
-                                      nsIVirtualFileSystemRequestValue* aValue,
-                                      bool aHasMore)
-{
-  Unused << aValue;
-  Unused << aHasMore;
-
-  if (!mFileSystemProvider) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
-
-  if (!NS_IsMainThread()) {
-    RefPtr<MountUnmountResultCallback> self = this;
-    nsCOMPtr<nsIRunnable> r = NS_NewRunnableFunction([self, aRequestId] () -> void
-    {
-      self->OnSuccess(aRequestId, nullptr, false);
-    });
-    return NS_DispatchToMainThread(r);
-  }
-
-  mFileSystemProvider->NotifyMountUnmountResult(aRequestId, true);
-  Forget();
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-MountUnmountResultCallback::OnError(uint32_t aRequestId, uint32_t aErrorCode)
-{
-  Unused << aErrorCode;
-
-  if (!mFileSystemProvider) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
-
-  if (!NS_IsMainThread()) {
-    RefPtr<MountUnmountResultCallback> self = this;
-    nsCOMPtr<nsIRunnable> r = NS_NewRunnableFunction([self, aRequestId] () -> void
-    {
-      self->OnError(aRequestId, false);
-    });
-    return NS_DispatchToMainThread(r);
-  }
-
-  mFileSystemProvider->NotifyMountUnmountResult(aRequestId, false);
-  Forget();
-  return NS_OK;
+    aOptions,
+    aRequestManager);
 }
 
 static uint32_t sRequestId = 0;
@@ -145,13 +73,7 @@ FileSystemProvider::Init()
 {
   mVirtualFileSystemService =
     VirtualFileSystemServiceFactory::AutoCreateVirtualFileSystemService();
-  if (!mVirtualFileSystemService) {
-    return false;
-  }
-
-  mRequestManager =
-    new virtualfilesystem::nsVirtualFileSystemRequestManager(mEventDispatcher);
-  return true;
+  return !!mVirtualFileSystemService;
 }
 
 JSObject*
@@ -180,10 +102,10 @@ FileSystemProvider::Mount(const MountOptions& aOptions, ErrorResult& aRv)
   mPendingRequestPromises[++sRequestId] = promise;
 
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
-    new MountUnmountResultCallback(this);
+    new FileSystemProviderMountUnmountCallback(this);
   nsresult rv = mVirtualFileSystemService->Mount(sRequestId,
                                                  aOptions,
-                                                 mRequestManager,
+                                                 mEventDispatcher,
                                                  callback);
   if (NS_FAILED(rv)) {
     aRv.Throw(rv);
@@ -206,7 +128,7 @@ FileSystemProvider::Unmount(const UnmountOptions& aOptions, ErrorResult& aRv)
   mPendingRequestPromises[++sRequestId] = promise;
 
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
-    new MountUnmountResultCallback(this);
+    new FileSystemProviderMountUnmountCallback(this);
   nsresult rv = mVirtualFileSystemService->Unmount(sRequestId, aOptions, callback);
   if (NS_FAILED(rv)) {
     aRv.Throw(rv);
@@ -240,30 +162,35 @@ nsresult
 FileSystemProvider::DispatchFileSystemProviderEventInternal(
   uint32_t aRequestId,
   const nsAString& aFileSystemId,
-  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions)
+  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions,
+  virtualfilesystem::BaseVirtualFileSystemRequestManager* aRequestManager)
 {
+  if (!aRequestManager) {
+    return NS_ERROR_FAILURE;
+  }
+
   RefPtr<FileSystemProviderEvent> event;
   switch (aOptions.type()) {
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemAbortRequestedOptions:
-      event = new FileSystemProviderAbortEvent(this, mRequestManager);
+      event = new FileSystemProviderAbortEvent(this, aRequestManager);
       break;
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemCloseFileRequestedOptions:
-      event = new FileSystemProviderCloseFileEvent(this, mRequestManager);
+      event = new FileSystemProviderCloseFileEvent(this, aRequestManager);
       break;
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemGetMetadataRequestedOptions:
-      event = new FileSystemProviderGetMetadataEvent(this, mRequestManager);
+      event = new FileSystemProviderGetMetadataEvent(this, aRequestManager);
       break;
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemOpenFileRequestedOptions:
-      event = new FileSystemProviderOpenFileEvent(this, mRequestManager);
+      event = new FileSystemProviderOpenFileEvent(this, aRequestManager);
       break;
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadDirectoryRequestedOptions:
-      event = new FileSystemProviderReadDirectoryEvent(this, mRequestManager);
+      event = new FileSystemProviderReadDirectoryEvent(this, aRequestManager);
       break;
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemReadFileRequestedOptions:
-      event = new FileSystemProviderReadFileEvent(this, mRequestManager);
+      event = new FileSystemProviderReadFileEvent(this, aRequestManager);
       break;
     case VirtualFileSystemIPCRequestedOptions::TVirtualFileSystemUnmountRequestedOptions:
-      event = new FileSystemProviderUnmountEvent(this, mRequestManager);
+      event = new FileSystemProviderUnmountEvent(this, aRequestManager);
       break;
     default:
       MOZ_ASSERT(false);

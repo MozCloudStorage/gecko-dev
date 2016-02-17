@@ -2,10 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/dom/FileSystemProviderBinding.h"
+#include "mozilla/dom/FileSystemProviderCommon.h"
 #include "mozilla/dom/virtualfilesystem/PVirtualFileSystem.h"
-#include "mozilla/Function.h"
-#include "mozilla/Move.h"
 #include "nsVirtualFileSystem.h"
 #include "nsArrayUtils.h"
 #include "nsThreadUtils.h"
@@ -13,42 +11,6 @@
 namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
-
-class CallbackWrapper final : public nsIVirtualFileSystemCallback
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
-
-  explicit CallbackWrapper(nsIVirtualFileSystemCallback* aCallback,
-                           mozilla::Function<void(uint32_t)> aFunction)
-    : mSavedCallback(aCallback)
-    , mFunction(Move(aFunction))
-  {}
-
-private:
-  ~CallbackWrapper() = default;
-
-  nsCOMPtr<nsIVirtualFileSystemCallback> mSavedCallback;
-  mozilla::Function<void(uint32_t)> mFunction;
-};
-
-NS_IMPL_ISUPPORTS(CallbackWrapper, nsIVirtualFileSystemCallback)
-
-NS_IMETHODIMP
-CallbackWrapper::OnSuccess(uint32_t aRequestId,
-                           nsIVirtualFileSystemRequestValue* aValue,
-                           bool aHasMore)
-{
-  mFunction(aRequestId);
-  return mSavedCallback->OnSuccess(aRequestId, aValue, aHasMore);
-}
-
-NS_IMETHODIMP
-CallbackWrapper::OnError(uint32_t aRequestId, uint32_t aErrorCode)
-{
-  return mSavedCallback->OnError(aRequestId, aErrorCode);
-}
 
 FileSystemInfoWrapper::FileSystemInfoWrapper(const MountOptions& aOptions)
 {
@@ -138,11 +100,23 @@ NS_IMPL_ISUPPORTS(nsVirtualFileSystem, nsIVirtualFileSystem)
 
 nsVirtualFileSystem::nsVirtualFileSystem(
   FileSystemInfoWrapper* aFileSysetmInfo,
-  nsVirtualFileSystemRequestManager* aRequestManager)
+  BaseVirtualFileSystemRequestManager* aRequestManager)
   : mFileSystemInfo(aFileSysetmInfo)
   , mRequestManager(aRequestManager)
 {
   MOZ_ASSERT(XRE_IsParentProcess());
+}
+
+NS_IMETHODIMP
+nsVirtualFileSystem::GetRequestManager(BaseVirtualFileSystemRequestManager** aRequestManager)
+{
+  if (NS_WARN_IF(!aRequestManager)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  RefPtr<BaseVirtualFileSystemRequestManager> requestManager = mRequestManager;
+  requestManager.forget(aRequestManager);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -153,13 +127,11 @@ nsVirtualFileSystem::Abort(const uint32_t aOperationId,
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(mRequestManager);
 
-  printf_stderr("############### abort\n");
   if (NS_WARN_IF(!(aCallback && aRequestId))) {
     return NS_ERROR_INVALID_ARG;
   }
 
   VirtualFileSystemAbortRequestedOptions options(aOperationId);
-  printf_stderr("############### abort 1\n");
   return mRequestManager->CreateRequest(
     mFileSystemInfo->FileSystemId(),
     VirtualFileSystemIPCRequestedOptions(options),
@@ -180,7 +152,7 @@ nsVirtualFileSystem::OpenFile(const nsAString& aPath,
     return NS_ERROR_INVALID_ARG;
   }
 
-  if (aMode != nsIVirtualFileSystem::OPEN_FILE_MODE_READ ||
+  if (aMode != nsIVirtualFileSystem::OPEN_FILE_MODE_READ &&
       aMode != nsIVirtualFileSystem::OPEN_FILE_MODE_WRITE) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -207,7 +179,7 @@ nsVirtualFileSystem::OpenFile(const nsAString& aPath,
     self->mFileSystemInfo->AppendOpenedFile(file);
   };
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
-    new CallbackWrapper(aCallback, func);
+    new VirtualFileSystemCallbackWrapper(aCallback, func, [] (uint32_t aId) {});
 
   return mRequestManager->CreateRequest(
     mFileSystemInfo->FileSystemId(),
@@ -234,7 +206,7 @@ nsVirtualFileSystem::CloseFile(uint32_t aOpenFileRequestId,
     self->mFileSystemInfo->RemoveOpenedFile(aId);
   };
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
-    new CallbackWrapper(aCallback, func);
+    new VirtualFileSystemCallbackWrapper(aCallback, func, [] (uint32_t aId) {});
 
   return mRequestManager->CreateRequest(
     mFileSystemInfo->FileSystemId(),

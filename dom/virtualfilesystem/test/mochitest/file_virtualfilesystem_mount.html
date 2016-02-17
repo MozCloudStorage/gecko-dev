@@ -1,0 +1,94 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Test for FileSystemProvider API at receiver side</title>
+</head>
+<body>
+<div id="content"></div>
+<script type="text/javascript" src="virtualfilesystem_common.js"></script>
+<script type="text/javascript" src="virtualfilesystem_helper.js"></script>
+<script type="application/javascript;version=1.7">
+
+"use strict";
+
+function testMount() {
+  return new Promise(function(aResolve, aReject) {
+    ok(navigator.fileSystemProvider, "should have navigator.fileSystemProvider");
+    navigator.fileSystemProvider.mount(mountOption).then(
+      function() {
+        ok(true, "mount ok.");
+        var info = navigator.fileSystemProvider.get(mountOption.fileSystemId);
+        ok(info, "got fileSystemInfo.");
+        is(info.fileSystemId, mountOption.fileSystemId, "fileSystemId should be the same.");
+        is(info.displayName, mountOption.displayName, "displayName should be the same.");
+        is(info.writable, mountOption.writable, "writable should be the same.");
+        is(info.openedFilesLimit, mountOption.openedFilesLimit, "openedFilesLimit should be the same.");
+        ok(info.openedFiles.length === 0, "Should be no opened files.");
+        aResolve();
+      },
+      function(aError) {
+        ok(false, "Fail to mount: " + aError);
+        aResolve();
+      }
+    );
+  });
+}
+
+function testMountAgain() {
+  return new Promise(function(aResolve, aReject) {
+    navigator.fileSystemProvider.mount(mountOption).then(
+      function() {
+        ok(false, "Can not mount with the same fileSystemId.");
+        aResolve();
+      },
+      function(aError) {
+        ok(true, "Fail to mount with the same fileSystemId.");
+        aResolve();
+      }
+    );
+  });
+}
+
+function testMountWithOption1() {
+  return new Promise(function(aResolve, aReject) {
+    navigator.fileSystemProvider.mount(mountOption1).then(
+      function() {
+        ok(true, "mount ok.");
+        var info = navigator.fileSystemProvider.getAll()[1];
+        ok(info, "got fileSystemInfo.");
+        is(info.fileSystemId, mountOption1.fileSystemId, "fileSystemId should be the same.");
+        is(info.displayName, mountOption1.displayName, "displayName should be the same.");
+        is(info.writable, mountOption1.writable, "writable should be the same.");
+        is(info.openedFilesLimit, mountOption1.openedFilesLimit, "openedFilesLimit should be the same.");
+        ok(info.openedFiles.length === 0, "Should be no opened files.");
+        aResolve();
+      },
+      function(aError) {
+        ok(false, "Fail to mount: " + aError);
+        aResolve();
+      }
+    );
+  });
+}
+
+function testUnmount() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemInfoArray = navigator.fileSystemProvider.getAll();
+    for (var i = 0; i < fileSystemInfoArray.length; i++) {
+      navigator.fileSystemProvider.unmount({fileSystemId: fileSystemInfoArray[i].fileSystemId});
+    }
+    ok(navigator.fileSystemProvider.getAll().length === 0, "Should be no fileSystem now.");
+    aResolve();
+  });
+}
+
+testMount()
+.then(testMountAgain)
+.then(testMountWithOption1)
+.then(testUnmount)
+.then(finish);
+
+</script>
+</body>
+</html>

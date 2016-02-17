@@ -63,7 +63,7 @@ OpenFileRequestedOptions::Mode() const
 
 FileSystemProviderOpenFileEvent::FileSystemProviderOpenFileEvent(
   EventTarget* aOwner,
-  nsVirtualFileSystemRequestManager* aManager)
+  BaseVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("openfilerequested"))
 {

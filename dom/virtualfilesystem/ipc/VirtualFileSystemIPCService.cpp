@@ -54,10 +54,10 @@ VirtualFileSystemIPCService::~VirtualFileSystemIPCService()
 nsresult
 VirtualFileSystemIPCService::Mount(uint32_t aRequestId,
                                    const MountOptions& aOptions,
-                                   nsVirtualFileSystemRequestManager* aRequestManager,
+                                   BaseFileSystemProviderEventDispatcher* aEventDispatcher,
                                    nsIVirtualFileSystemCallback* aCallback)
 {
-  if (NS_WARN_IF(!(aRequestManager && aCallback))) {
+  if (NS_WARN_IF(!(aEventDispatcher && aCallback))) {
     return NS_ERROR_INVALID_ARG;
   }
 
@@ -72,7 +72,7 @@ VirtualFileSystemIPCService::Mount(uint32_t aRequestId,
 
   uint32_t errorCode;
   RefPtr<FileSystemInfoWrapper> info =
-    MountInternal(aOptions, aRequestManager, &errorCode);
+    MountInternal(aOptions, &errorCode);
   if (!info) {
     aCallback->OnError(aRequestId, errorCode);
     return NS_ERROR_FAILURE;
@@ -82,7 +82,12 @@ VirtualFileSystemIPCService::Mount(uint32_t aRequestId,
     return NS_ERROR_FAILURE;
   }
 
-  mMountUnmountCallbackMap[aRequestId] = aCallback;
+  nsCOMPtr<nsIVirtualFileSystemCallback> callback =
+    CreateWrappedErrorCallback(aOptions.mFileSystemId, aCallback);
+  mMountUnmountCallbackMap[aRequestId] = callback;
+
+  gVirtualFileSystemChild->RegisterEventDispatcher(aOptions.mFileSystemId,
+                                                   aEventDispatcher);
   return NS_OK;
 }
 
@@ -116,6 +121,8 @@ VirtualFileSystemIPCService::Unmount(
   }
 
   mMountUnmountCallbackMap[aRequestId] = aCallback;
+
+  gVirtualFileSystemChild->UnregisterEventDispatcher(aOptions.mFileSystemId);
   return NS_OK;
 }
 

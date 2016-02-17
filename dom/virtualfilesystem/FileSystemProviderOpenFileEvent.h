@@ -46,7 +46,7 @@ class FileSystemProviderOpenFileEvent final
 {
 public:
   FileSystemProviderOpenFileEvent(EventTarget* aOwner,
-                                  nsVirtualFileSystemRequestManager* aManager);
+                                  BaseVirtualFileSystemRequestManager* aManager);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
                                        JS::Handle<JSObject*> aGivenProto) override;

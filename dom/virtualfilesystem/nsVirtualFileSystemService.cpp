@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/ClearOnShutdown.h"
-#include "mozilla/dom/FileSystemProviderBinding.h"
+#include "mozilla/dom/FileSystemProviderCommon.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIMutableArray.h"
 #include "nsIVirtualFileSystemCallback.h"
@@ -23,27 +23,6 @@
 namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
-
-class MountUnmountSuccessCallback final : public nsRunnable
-{
-public:
-  explicit MountUnmountSuccessCallback(uint32_t aRequestId,
-                                       nsIVirtualFileSystemCallback* aCallback)
-    : mRequestId(aRequestId)
-    , mCallback(aCallback)
-  {
-  }
-
-  NS_IMETHOD Run()
-  {
-    mCallback->OnSuccess(mRequestId, nullptr, false);
-    return NS_OK;
-  }
-
-private:
-  uint32_t mRequestId;
-  nsCOMPtr<nsIVirtualFileSystemCallback> mCallback;
-};
 
 NS_IMPL_ISUPPORTS0(BaseVirtualFileSystemService)
 
@@ -67,8 +46,8 @@ BaseVirtualFileSystemService::FindFileSystemInfoById(const nsAString& aFileSyste
   RefPtr<FileSystemInfoWrapper> info = new FileSystemInfoWrapper(options);
 
   size_t index =
-    mVirtualFileSystems.IndexOf(info, 0, FileSystemInfoComparator());
-  if (index == mVirtualFileSystems.NoIndex) {
+    mFileSystemInfoArray.IndexOf(info, 0, FileSystemInfoComparator());
+  if (index == mFileSystemInfoArray.NoIndex) {
     return false;
   }
 
@@ -85,7 +64,7 @@ BaseVirtualFileSystemService::GetFileSysetmInfoById(const nsAString& aFileSystem
     return NS_ERROR_INVALID_ARG;
   }
 
-  RefPtr<FileSystemInfoWrapper> info = mVirtualFileSystems[index];
+  RefPtr<FileSystemInfoWrapper> info = mFileSystemInfoArray[index];
 
   info->GetFileSystemInfo(aInfo);
   return NS_OK;
@@ -96,7 +75,7 @@ BaseVirtualFileSystemService::GetAllFileSystemInfo(
   nsTArray<FileSystemInfo>& aArray)
 {
   aArray.Clear();
-  for (const auto& it : mVirtualFileSystems) {
+  for (const auto& it : mFileSystemInfoArray) {
     FileSystemInfo info;
     it->GetFileSystemInfo(info);
     aArray.AppendElement(info);
@@ -106,7 +85,6 @@ BaseVirtualFileSystemService::GetAllFileSystemInfo(
 already_AddRefed<FileSystemInfoWrapper>
 BaseVirtualFileSystemService::MountInternal(
   const MountOptions& aOptions,
-  nsVirtualFileSystemRequestManager* aRequestManager,
   uint32_t* aErrorCode)
 {
   if (!aErrorCode) {
@@ -121,7 +99,7 @@ BaseVirtualFileSystemService::MountInternal(
 
   RefPtr<FileSystemInfoWrapper> info = new FileSystemInfoWrapper(aOptions);
 
-  mVirtualFileSystems.AppendElement(info);
+  mFileSystemInfoArray.AppendElement(info);
   return info.forget();
 }
 
@@ -140,8 +118,30 @@ BaseVirtualFileSystemService::UnmountInternal(
     return false;
   }
 
-  mVirtualFileSystems.RemoveElementAt(index);
+  mFileSystemInfoArray.RemoveElementAt(index);
   return true;
+}
+
+already_AddRefed<nsIVirtualFileSystemCallback>
+BaseVirtualFileSystemService::CreateWrappedErrorCallback(
+  const nsString& aFileSystemId,
+  nsIVirtualFileSystemCallback* aCallback)
+{
+  // Call Unmount if callback's OnError is called
+  BaseVirtualFileSystemService* self = this;
+  auto onErrorFunc = [aFileSystemId, self] (uint32_t aId) -> void {
+    UnmountOptions options;
+    options.mFileSystemId = aFileSystemId;
+    self->Unmount(
+      0,
+      options,
+      new VirtualFileSystemCallbackWrapper(nullptr,
+                                           [] (uint32_t aId) {},
+                                           [] (uint32_t aId) {}));
+  };
+  nsCOMPtr<nsIVirtualFileSystemCallback> callback =
+    new VirtualFileSystemCallbackWrapper(aCallback, [] (uint32_t aId) {}, onErrorFunc);
+  return callback.forget();
 }
 
 StaticRefPtr<nsVirtualFileSystemService>
@@ -181,24 +181,28 @@ CreateMountPoint(const nsAString& aFileSystemId)
 nsresult
 nsVirtualFileSystemService::Mount(uint32_t aRequestId,
                                   const MountOptions& aOptions,
-                                  nsVirtualFileSystemRequestManager* aRequestManager,
+                                  BaseFileSystemProviderEventDispatcher* aDispatcher,
                                   nsIVirtualFileSystemCallback* aCallback)
 {
-  if (NS_WARN_IF(!(aRequestManager && aCallback))) {
+  if (NS_WARN_IF(!(aDispatcher && aCallback))) {
     return NS_ERROR_INVALID_ARG;
   }
 
   uint32_t errorCode;
   RefPtr<FileSystemInfoWrapper> info =
-    MountInternal(aOptions, aRequestManager, &errorCode);
+    MountInternal(aOptions, &errorCode);
   if (!info) {
     aCallback->OnError(aRequestId, errorCode);
     return NS_ERROR_FAILURE;
   }
 
   nsCOMPtr<nsIVirtualFileSystem> fileSystem =
-    new nsVirtualFileSystem(info, aRequestManager);
+    new nsVirtualFileSystem(info, new nsVirtualFileSystemRequestManager(aDispatcher));
   mVirtualFileSystemMap[aOptions.mFileSystemId] = fileSystem;
+
+  nsCOMPtr<nsIVirtualFileSystemCallback> callback =
+    CreateWrappedErrorCallback(aOptions.mFileSystemId, aCallback);
+
 #ifdef MOZ_WIDGET_GONK
   nsString mountPoint = nsVirtualFileSystemService::CreateMountPoint(fileSystemId);
   SetupFuseDevice(fileSystem,
@@ -206,9 +210,8 @@ nsVirtualFileSystemService::Mount(uint32_t aRequestId,
                   aOptions.mFileSystemId,
                   aOptions.mDisplayName,
                   aRequestId,
-                  aCallback);
+                  callback);
 #else
-  nsCOMPtr<nsIVirtualFileSystemCallback> callback = aCallback;
   nsCOMPtr<nsIRunnable> runnable =
     NS_NewRunnableFunction([callback, aRequestId] () -> void
       {
@@ -238,6 +241,8 @@ nsVirtualFileSystemService::Unmount(
     return NS_ERROR_FAILURE;
   }
 
+  mVirtualFileSystemMap.erase(aOptions.mFileSystemId);
+
 #ifdef MOZ_WIDGET_GONK
   ShotdownFuseDevice(aOptions.mFileSystemId, aRequestId, aCallback);
 #else
@@ -266,12 +271,14 @@ nsVirtualFileSystemService::GetVirtualFileSystemById(
     return NS_ERROR_INVALID_ARG;
   }
 
-  VirtualFileSystemMapType::iterator it = mVirtualFileSystemMap.find(nsString(aFileSystemId));
+  VirtualFileSystemMapType::iterator it =
+    mVirtualFileSystemMap.find(nsString(aFileSystemId));
   if (it == mVirtualFileSystemMap.end()) {
     return NS_ERROR_INVALID_ARG;
   }
 
-  it->second.forget(aRetVal);
+  nsCOMPtr<nsIVirtualFileSystem> fileSystem = it->second;
+  fileSystem.forget(aRetVal);
   return NS_OK;
 }
 

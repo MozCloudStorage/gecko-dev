@@ -21,12 +21,15 @@ public:
 
   virtual nsresult Mount(uint32_t aRequestId,
                          const MountOptions& aOptions,
-                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         BaseFileSystemProviderEventDispatcher* aEventDispatcher,
                          nsIVirtualFileSystemCallback* aCallback) override;
+
   virtual nsresult Unmount(uint32_t aRequestId,
                            const UnmountOptions& aOptions,
                            nsIVirtualFileSystemCallback* aCallback) override;
+
   void NotifyVirtualFileSystemChildDestroyed();
+
   bool NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded);
 
 private:

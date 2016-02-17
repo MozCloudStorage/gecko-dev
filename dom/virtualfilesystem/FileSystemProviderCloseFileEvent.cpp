@@ -56,7 +56,7 @@ CloseFileRequestedOptions::OpenRequestId() const
 
 FileSystemProviderCloseFileEvent::FileSystemProviderCloseFileEvent(
   EventTarget* aOwner,
-  nsVirtualFileSystemRequestManager* aManager)
+  BaseVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("closefilerequested"))
 {

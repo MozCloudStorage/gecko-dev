@@ -71,7 +71,7 @@ ReadFileRequestedOptions::Length() const
 
 FileSystemProviderReadFileEvent::FileSystemProviderReadFileEvent(
   EventTarget* aOwner,
-  nsVirtualFileSystemRequestManager* aManager)
+  BaseVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("readfilerequested"))
 {

@@ -25,7 +25,7 @@ enum FileSystemProviderError {
     "InvalidURL",
   };
 
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderRequestedOptions {
   // The identifier of the file system related to this operation.
   readonly attribute DOMString fileSystemId;
@@ -34,7 +34,7 @@ interface FileSystemProviderRequestedOptions {
   readonly attribute unsigned long requestId;
 };
 
-[Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+[Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
 interface FileSystemProviderEvent : Event {
   void errorCallback(FileSystemProviderError error);
 };

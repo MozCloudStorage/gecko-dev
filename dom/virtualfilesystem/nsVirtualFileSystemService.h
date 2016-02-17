@@ -18,6 +18,7 @@ class nsIVirtualFileSystemCallback;
 namespace mozilla {
 namespace dom {
 
+class BaseFileSystemProviderEventDispatcher;
 struct FileSystemInfo;
 struct MountOptions;
 struct UnmountOptions;
@@ -25,7 +26,7 @@ struct UnmountOptions;
 namespace virtualfilesystem {
 
 class FileSystemInfoWrapper;
-class nsVirtualFileSystemRequestManager;
+class BaseVirtualFileSystemRequestManager;
 
 class BaseVirtualFileSystemService : public nsISupports {
 public:
@@ -33,7 +34,7 @@ public:
 
   virtual nsresult Mount(uint32_t aRequestId,
                          const MountOptions& aOptions,
-                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         BaseFileSystemProviderEventDispatcher* aDispatcher,
                          nsIVirtualFileSystemCallback* aCallback) = 0;
 
   virtual nsresult Unmount(uint32_t aRequestId,
@@ -51,12 +52,14 @@ protected:
   bool FindFileSystemInfoById(const nsAString& aFileSystemId, uint32_t& aIndex);
   already_AddRefed<FileSystemInfoWrapper>
   MountInternal(const MountOptions& aOptions,
-                nsVirtualFileSystemRequestManager* aRequestManager,
                 uint32_t* aErrorCode);
   bool UnmountInternal(const UnmountOptions& aOptions,
                        uint32_t* aErrorCode);
+  already_AddRefed<nsIVirtualFileSystemCallback>
+  CreateWrappedErrorCallback(const nsString& aFileSystemId,
+                             nsIVirtualFileSystemCallback* aCallback);
 
-  nsTArray<RefPtr<FileSystemInfoWrapper>> mVirtualFileSystems;
+  nsTArray<RefPtr<FileSystemInfoWrapper>> mFileSystemInfoArray;
 };
 
 class nsVirtualFileSystemService final
@@ -71,7 +74,7 @@ public:
 
   virtual nsresult Mount(uint32_t aRequestId,
                          const MountOptions& aOptions,
-                         nsVirtualFileSystemRequestManager* aRequestManager,
+                         BaseFileSystemProviderEventDispatcher* aDispatcher,
                          nsIVirtualFileSystemCallback* aCallback) override;
   virtual nsresult Unmount(uint32_t aRequestId,
                            const UnmountOptions& aOptions,

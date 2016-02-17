@@ -58,7 +58,7 @@ ReadDirectoryRequestedOptions::GetDirectoryPath(nsAString& aPath) const
 
 FileSystemProviderReadDirectoryEvent::FileSystemProviderReadDirectoryEvent(
   EventTarget* aOwner,
-  nsVirtualFileSystemRequestManager* aManager)
+  BaseVirtualFileSystemRequestManager* aManager)
   : FileSystemProviderEventWrap(
     aOwner, aManager, NS_LITERAL_STRING("readdirectoryrequested"))
 {
@@ -76,13 +76,13 @@ void
 FileSystemProviderReadDirectoryEvent::SuccessCallback(const Sequence<EntryMetadata>& aEntries,
                                                       bool aHasMore)
 {
-  nsTArray<nsCOMPtr<nsIEntryMetadata>> entries;
+  nsTArray<EntryMetadata> entries;
   for (uint32_t i = 0; i < aEntries.Length(); i++) {
-    entries.AppendElement(virtualfilesystem::nsEntryMetadata::FromEntryMetadata(aEntries[i]));
+    entries.AppendElement(aEntries[i]);
   }
 
   nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestValue> value =
-    new virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue(Move(entries));
+    new virtualfilesystem::nsVirtualFileSystemReadDirectoryRequestValue(entries);
 
   FileSystemProviderEvent::OnSuccess(value, aHasMore);
 }

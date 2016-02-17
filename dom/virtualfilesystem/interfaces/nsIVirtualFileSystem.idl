@@ -6,13 +6,27 @@
 
 interface nsIVirtualFileSystemCallback;
 
+%{C++
+namespace mozilla {
+namespace dom {
+namespace virtualfilesystem {
+class BaseVirtualFileSystemRequestManager;
+}
+}
+}
+%}
+
+[ptr] native RequestManagerPtr(mozilla::dom::virtualfilesystem::BaseVirtualFileSystemRequestManager);
+
 /**
  * XPCOM component which provides file system implementation.
  * Create and forward requests between providers and clients.
  */
-[scriptable, uuid(4fa8b88d-0622-45be-8a55-51b9f9fa62b7)]
+[scriptable, uuid(2e5363e1-8768-4f15-8398-aa677988e01d)]
 interface nsIVirtualFileSystem : nsISupports
 {
+  [noscript] readonly attribute RequestManagerPtr requestManager;
+
   unsigned long abort(in unsigned long operationId,
                       in nsIVirtualFileSystemCallback callback);
 

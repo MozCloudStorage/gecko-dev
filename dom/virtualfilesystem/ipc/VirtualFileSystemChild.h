@@ -12,6 +12,9 @@
 
 namespace mozilla {
 namespace dom {
+
+class BaseFileSystemProviderEventDispatcher;
+
 namespace virtualfilesystem {
 
 class VirtualFileSystemIPCService;
@@ -26,7 +29,6 @@ public:
 
   virtual PVirtualFileSystemRequestChild* AllocPVirtualFileSystemRequestChild(
     const uint32_t& aRequestId,
-    const uint32_t& aRequestType,
     const nsString& aFileSystemId,
     const VirtualFileSystemIPCRequestedOptions& aOptions) override;
 
@@ -38,34 +40,51 @@ public:
   virtual bool RecvPVirtualFileSystemRequestConstructor(
     PVirtualFileSystemRequestChild* aActor,
     const uint32_t& aRequestId,
-    const uint32_t& aRequestType,
     const nsString& aFileSystemId,
     const VirtualFileSystemIPCRequestedOptions& aOptions) override;
+
+  void RegisterEventDispatcher(const nsAString& aFileSystemId,
+                               BaseFileSystemProviderEventDispatcher* aDispatcher);
+
+  void UnregisterEventDispatcher(const nsAString& aFileSystemId);
 
 private:
   virtual ~VirtualFileSystemChild();
 
   bool mActorDestroyed;
   RefPtr<VirtualFileSystemIPCService> mService;
+  typedef std::map<nsString, RefPtr<BaseFileSystemProviderEventDispatcher>>
+  EventDispatcherMapType;
+  EventDispatcherMapType mEventDispatcherMap;
 };
 
-class VirtualFileSystemRequestChild final : public nsISupports
+class VirtualFileSystemRequestChild final : public BaseVirtualFileSystemRequestManager
                                           , public PVirtualFileSystemRequestChild
 {
 public:
-  NS_DECL_ISUPPORTS
+  explicit VirtualFileSystemRequestChild(
+    VirtualFileSystemIPCRequestedOptions::Type aType)
+    : mType(aType)
+    , mActorDestroyed(false)
+  {}
 
-  VirtualFileSystemRequestChild(VirtualFileSystemIPCService* aService);
-
-  virtual bool Recv__delete__(
-    const VirtualFileSystemResponseValue& aResponse) override;
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
-private:
-  virtual ~VirtualFileSystemRequestChild();
+  virtual nsresult CreateRequest(const nsAString& aFileSystemId,
+                                 const VirtualFileSystemIPCRequestedOptions& aOptions,
+                                 nsIVirtualFileSystemCallback* aCallback,
+                                 uint32_t* aRequestId) override;
+  virtual nsresult FufillRequest(uint32_t aRequestId,
+                                 nsIVirtualFileSystemRequestValue* aValue,
+                                 bool aHasMore) override;
+  virtual nsresult RejectRequest(uint32_t aRequestId, uint32_t aErrorCode) override;
 
-  RefPtr<VirtualFileSystemIPCService> mService;
+private:
+  virtual ~VirtualFileSystemRequestChild() = default;
+
+  const VirtualFileSystemIPCRequestedOptions::Type mType;
+  bool mActorDestroyed;
 };
 
 } // namespace virtualfilesystem

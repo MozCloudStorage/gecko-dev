@@ -459,6 +459,6 @@ partial interface Navigator {
 #endif
 
 partial interface Navigator {
-  [Throws, Pref="device.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
+  [Throws, Pref="dom.filesystemprovider.enabled", CheckAnyPermissions="filesystemprovider", AvailableIn="CertifiedApps"]
   readonly attribute FileSystemProvider fileSystemProvider;
 };

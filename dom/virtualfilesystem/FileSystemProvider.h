@@ -8,10 +8,8 @@
 #define mozilla_dom_FileSystemProvider_h
 
 #include <map>
-#include "ipc/IPCMessageUtils.h"
-#include "mozilla/dom/FileSystemProviderBinding.h"
+#include "mozilla/dom/FileSystemProviderCommon.h"
 #include "mozilla/DOMEventTargetHelper.h"
-#include "nsIVirtualFileSystemCallback.h"
 
 namespace mozilla {
 namespace dom {
@@ -19,54 +17,35 @@ namespace dom {
 namespace virtualfilesystem {
 
 class BaseVirtualFileSystemService;
-class nsVirtualFileSystem;
-class nsVirtualFileSystemRequestManager;
 class VirtualFileSystemIPCRequestedOptions;
 
 } // namespace virtualfilesystem
 
-struct MountOptions;
-struct UnmountOptions;
 class Promise;
-class MountUnmountResultCallback;
 
-class FileSystemProviderProxy : public nsISupports
-{
-public:
-  NS_DECL_THREADSAFE_ISUPPORTS
-
-  explicit FileSystemProviderProxy(FileSystemProvider* aProvider)
-    : mFileSystemProvider(aProvider) {}
-  void Forget() { mFileSystemProvider = nullptr; }
-
-protected:
-  virtual ~FileSystemProviderProxy() {}
-
-  FileSystemProvider* MOZ_NON_OWNING_REF mFileSystemProvider;
-};
+using virtualfilesystem::BaseVirtualFileSystemService;
 
 class FileSystemProviderEventDispatcher final
-  : public FileSystemProviderProxy
+  : public FileSystemProviderProxy<FileSystemProvider>
+  , public BaseFileSystemProviderEventDispatcher
 {
 public:
-  NS_DECL_ISUPPORTS_INHERITED
-
   explicit FileSystemProviderEventDispatcher(FileSystemProvider* aProvider)
     : FileSystemProviderProxy(aProvider) {}
 
-  nsresult DispatchFileSystemProviderEvent(
+  virtual nsresult DispatchFileSystemProviderEvent(
     uint32_t aRequestId,
     const nsAString& aFileSystemId,
-    const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions);
+    const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions,
+    virtualfilesystem::BaseVirtualFileSystemRequestManager* aRequestManager) override;
 
 private:
-  virtual ~FileSystemProviderEventDispatcher() {}
+  virtual ~FileSystemProviderEventDispatcher() = default;
 
 };
 
-using virtualfilesystem::BaseVirtualFileSystemService;
-using virtualfilesystem::nsVirtualFileSystemRequestManager;
-using virtualfilesystem::nsVirtualFileSystem;
+typedef MountUnmountResultCallback<FileSystemProvider>
+FileSystemProviderMountUnmountCallback;
 
 class FileSystemProvider final : public DOMEventTargetHelper
 {
@@ -96,7 +75,7 @@ public:
 
 private:
   friend class FileSystemProviderEventDispatcher;
-  friend class MountUnmountResultCallback;
+  friend FileSystemProviderMountUnmountCallback;
 
   explicit FileSystemProvider(nsPIDOMWindow* aWindow);
   ~FileSystemProvider();
@@ -104,78 +83,16 @@ private:
   nsresult DispatchFileSystemProviderEventInternal(
     uint32_t aRequestId,
     const nsAString& aFileSystemId,
-    const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions);
+    const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions,
+    virtualfilesystem::BaseVirtualFileSystemRequestManager* aRequestManager);
   void NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded);
 
   RefPtr<FileSystemProviderEventDispatcher> mEventDispatcher;
   RefPtr<BaseVirtualFileSystemService> mVirtualFileSystemService;
-  RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
   std::map<uint32_t, RefPtr<Promise>> mPendingRequestPromises;
 };
 
 } // namespace dom
 } // namespace mozilla
-
-namespace IPC {
-template<>
-struct ParamTraits<mozilla::dom::MountOptions>
-{
-  typedef mozilla::dom::MountOptions paramType;
-
-  static void Write(Message* aMsg, const paramType& aParam)
-  {
-    WriteParam(aMsg, aParam.mDisplayName);
-    WriteParam(aMsg, aParam.mFileSystemId);
-    if (aParam.mWritable.WasPassed() && !aParam.mWritable.Value().IsNull()) {
-      WriteParam(aMsg, aParam.mWritable.Value().Value());
-    }
-    else {
-      WriteParam(aMsg, false);
-    }
-    if (aParam.mOpenedFilesLimit.WasPassed() &&
-        !aParam.mOpenedFilesLimit.Value().IsNull()) {
-      WriteParam(aMsg, aParam.mOpenedFilesLimit.Value().Value());
-    }
-    else {
-      WriteParam(aMsg, 0);
-    }
-  }
-
-  static bool Read(const Message* aMsg, void** aIter, paramType* aResult)
-  {
-    aResult->mWritable.Construct();
-    aResult->mOpenedFilesLimit.Construct();
-    bool writable = false;
-    uint32_t openedFilesLimit = 0;
-    if (!ReadParam(aMsg, aIter, &(aResult->mDisplayName)) ||
-        !ReadParam(aMsg, aIter, &(aResult->mFileSystemId)) ||
-        !ReadParam(aMsg, aIter, &writable) ||
-        !ReadParam(aMsg, aIter, &openedFilesLimit)) {
-      return false;
-    }
-    return true;
-  }
-};
-
-template<>
-struct ParamTraits<mozilla::dom::UnmountOptions>
-{
-  typedef mozilla::dom::UnmountOptions paramType;
-
-  static void Write(Message* aMsg, const paramType& aParam)
-  {
-    WriteParam(aMsg, aParam.mFileSystemId);
-  }
-
-  static bool Read(const Message* aMsg, void** aIter, paramType* aResult)
-  {
-    if (!ReadParam(aMsg, aIter, &(aResult->mFileSystemId))) {
-      return false;
-    }
-    return true;
-  }
-};
-
-} // namespace IPC
 
 #endif // mozilla_dom_FileSystemProvider_h

@@ -57,7 +57,6 @@ NS_IMPL_ADDREF_INHERITED(FileSystemProviderEvent, Event)
 NS_IMPL_RELEASE_INHERITED(FileSystemProviderEvent, Event)
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(FileSystemProviderEvent, Event)
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mRequestManager)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mOptions)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
@@ -65,7 +64,6 @@ NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN_INHERITED(FileSystemProviderEvent, Event)
 NS_IMPL_CYCLE_COLLECTION_TRACE_END
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(FileSystemProviderEvent, Event)
-NS_IMPL_CYCLE_COLLECTION_UNLINK(mRequestManager)
 NS_IMPL_CYCLE_COLLECTION_UNLINK(mOptions)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
@@ -73,7 +71,7 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(FileSystemProviderEvent)
 NS_INTERFACE_MAP_END_INHERITING(Event)
 
 FileSystemProviderEvent::FileSystemProviderEvent(EventTarget* aOwner,
-                                                 nsVirtualFileSystemRequestManager* aManager,
+                                                 BaseVirtualFileSystemRequestManager* aManager,
                                                  const nsAString& aEventName)
   : Event(aOwner, nullptr, nullptr)
   , mRequestManager(aManager)

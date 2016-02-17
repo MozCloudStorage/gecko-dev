@@ -21,8 +21,8 @@ public:
   NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIENTRYMETADATA
 
-  explicit nsEntryMetadata() = default;
-  static already_AddRefed<nsIEntryMetadata> FromEntryMetadata(const EntryMetadata& data);
+  nsEntryMetadata() = default;
+  explicit nsEntryMetadata(const EntryMetadata& data);
 
 private:
   virtual ~nsEntryMetadata() = default;
@@ -61,7 +61,7 @@ public:
 
   nsVirtualFileSystemReadDirectoryRequestValue() = default;
   explicit nsVirtualFileSystemReadDirectoryRequestValue(
-    nsTArray<nsCOMPtr<nsIEntryMetadata>>&& aArray);
+    const nsTArray<EntryMetadata>& aArray);
 
 private:
   ~nsVirtualFileSystemReadDirectoryRequestValue() = default;
@@ -79,6 +79,8 @@ public:
 
   nsVirtualFileSystemReadFileRequestValue() = default;
   explicit nsVirtualFileSystemReadFileRequestValue(const ArrayBuffer& aBuffer);
+  explicit nsVirtualFileSystemReadFileRequestValue(const nsCString& aData)
+    : mData(aData) {}
 
 private:
   ~nsVirtualFileSystemReadFileRequestValue() = default;

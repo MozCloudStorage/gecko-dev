@@ -20,11 +20,11 @@ namespace mozilla {
 namespace dom {
 
 namespace virtualfilesystem {
-  class nsVirtualFileSystemRequestManager;
+  class BaseVirtualFileSystemRequestManager;
 } // namespace virtualfilesystem
 
 using virtualfilesystem::VirtualFileSystemIPCRequestedOptions;
-using virtualfilesystem::nsVirtualFileSystemRequestManager;
+using virtualfilesystem::BaseVirtualFileSystemRequestManager;
 
 class FileSystemProviderRequestedOptions : public nsISupports
                                          , public nsWrapperCache
@@ -65,7 +65,7 @@ public:
                                                          Event)
 
   explicit FileSystemProviderEvent(EventTarget* aOwner,
-                                   nsVirtualFileSystemRequestManager* aManager,
+                                   BaseVirtualFileSystemRequestManager* aManager,
                                    const nsAString& aEventName);
 
   virtual JSObject* WrapObjectInternal(JSContext* aCx,
@@ -85,7 +85,7 @@ protected:
   void InitFileSystemProviderEventInternal(const nsAString& aType,
                                            FileSystemProviderRequestedOptions* aOptions);
 
-  RefPtr<nsVirtualFileSystemRequestManager> mRequestManager;
+  RefPtr<BaseVirtualFileSystemRequestManager> mRequestManager;
   RefPtr<FileSystemProviderRequestedOptions> mOptions;
   const nsString mEventName;
 };
@@ -95,7 +95,7 @@ class FileSystemProviderEventWrap : public FileSystemProviderEvent
 {
 public:
   explicit FileSystemProviderEventWrap(EventTarget* aOwner,
-                                       nsVirtualFileSystemRequestManager* aManager,
+                                       BaseVirtualFileSystemRequestManager* aManager,
                                        const nsAString& aEventName)
     : FileSystemProviderEvent(aOwner, aManager, aEventName)
   {}

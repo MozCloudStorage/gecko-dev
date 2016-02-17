@@ -1,0 +1,155 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Test for FileSystemProvider API at receiver side</title>
+</head>
+<body>
+<div id="content"></div>
+<script type="text/javascript" src="virtualfilesystem_common.js"></script>
+<script type="text/javascript" src="virtualfilesystem_helper.js"></script>
+<script type="application/javascript;version=1.7">
+
+"use strict";
+
+function testMount() {
+  return new Promise(function(aResolve, aReject) {
+     ok(navigator.fileSystemProvider, "should have navigator.fileSystemProvider");
+     navigator.fileSystemProvider.mount(mountOption).then(
+      function() {
+        ok(true, "mount ok.");
+        command({doTest:"testGetFileSystem"});
+        aResolve();
+      },
+      function(aError) {
+        ok(false, "Fail to mount: " + aError);
+        aResolve();
+      }
+    );
+  });
+}
+
+function nextTest(aResolve) {
+  navigator.fileSystemProvider.addEventListener("abortrequested", function onabort(e) {
+    navigator.fileSystemProvider.removeEventListener("abortrequested", onabort);
+    e.successCallback();
+    aResolve();
+  });
+}
+
+function testCloseFileEvent() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemProvider = navigator.fileSystemProvider;
+    fileSystemProvider.addEventListener("closefilerequested", function onClose(event) {
+      fileSystemProvider.removeEventListener("closefilerequested", onClose);
+      ok(true, "got closefilerequested event");
+      event.successCallback();
+    });
+    nextTest(aResolve);
+    command({doTest:"testCloseFileEvent"});
+  });
+}
+
+function testGetMetadataEvent() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemProvider = navigator.fileSystemProvider;
+    fileSystemProvider.addEventListener("getmetadatarequested", function onMetadata(event) {
+      fileSystemProvider.removeEventListener("getmetadatarequested", onMetadata);
+      ok(true, "got getmetadatarequested event");
+      is(testPath, event.options.entryPath, "entryPath should be the same.");
+      event.successCallback(entryMetadata);
+    });
+    nextTest(aResolve);
+    command({doTest:"testGetMetadataEvent"});
+  });
+}
+
+function testOpenFileEvent() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemProvider = navigator.fileSystemProvider;
+    fileSystemProvider.addEventListener("openfilerequested", function onOpen(event) {
+      fileSystemProvider.removeEventListener("openfilerequested", onOpen);
+      ok(true, "got openfilerequested event");
+      is(testPath, event.options.filePath, "filePath should be the same.");
+      is(openFileMode, event.options.mode, "mode should be the same.");
+      event.successCallback();
+    });
+    nextTest(aResolve);
+    command({doTest:"testOpenFileEvent"});
+  });
+}
+
+function testReadDirectoryEvent() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemProvider = navigator.fileSystemProvider;
+    fileSystemProvider.addEventListener("readdirectoryrequested", function onReadDirectory(event) {
+      fileSystemProvider.removeEventListener("readdirectoryrequested", onReadDirectory);
+      ok(true, "got readdirectoryrequested event");
+      is(testPath, event.options.directoryPath, "directoryPath should be the same.");
+      event.successCallback([entryMetadata], true);
+      event.successCallback([entryMetadata1], false);
+    });
+    nextTest(aResolve);
+    command({doTest:"testReadDirectoryEvent"});
+  });
+}
+
+function testReadFileEvent() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemProvider = navigator.fileSystemProvider;
+    fileSystemProvider.addEventListener("readfilerequested", function onReadFile(event) {
+      fileSystemProvider.removeEventListener("readfilerequested", onReadFile);
+      ok(true, "got readfilerequested event");
+      var buf = new ArrayBuffer(3);
+      var view = new Uint8Array(buf);
+      // set the content to "ABC"
+      view[0] = 65;
+      view[1] = 66;
+      view[2] = 67;
+      event.successCallback(buf, true);
+      var buf1 = new ArrayBuffer(2);
+      view = new Uint8Array(buf1);
+      // set the content to "ABC"
+      view[0] = 68;
+      view[1] = 69;
+      event.successCallback(buf1, false);
+    });
+    nextTest(aResolve);
+    command({doTest:"testReadFileEvent"});
+  });
+}
+
+function testUnmountEvent() {
+  return new Promise(function(aResolve, aReject) {
+    var fileSystemProvider = navigator.fileSystemProvider;
+    fileSystemProvider.addEventListener("unmountrequested", function onClose(event) {
+      fileSystemProvider.removeEventListener("unmountrequested", onClose);
+      ok(true, "got unmountrequested event");
+      fileSystemProvider.unmount(unmountOption).then(
+        function() {
+          ok(true, "unmount ok.");
+          event.successCallback();
+          aResolve();
+        },
+        function(aError) {
+          ok(false, "Fail to mount: " + aError);
+          aResolve();
+        }
+      );
+    });
+    command({doTest:"testUnmountEvent"});
+  });
+}
+
+testMount()
+.then(testCloseFileEvent)
+.then(testGetMetadataEvent)
+.then(testOpenFileEvent)
+.then(testReadDirectoryEvent)
+.then(testReadFileEvent)
+.then(testUnmountEvent)
+.then(finish);
+
+</script>
+</body>
+</html>

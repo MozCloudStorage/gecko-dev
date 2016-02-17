@@ -7,17 +7,19 @@
 #ifndef mozilla_dom_VirtualFileSystemParent_h
 #define mozilla_dom_VirtualFileSystemParent_h
 
+#include "mozilla/dom/FileSystemProviderCommon.h"
 #include "mozilla/dom/virtualfilesystem/PVirtualFileSystemParent.h"
 #include "mozilla/dom/virtualfilesystem/PVirtualFileSystemRequestParent.h"
-
-class nsIVirtualFileSystemRequestManager;
 
 namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
-class MountUnmountResultCallback;
 class BaseVirtualFileSystemService;
+class VirtualFileSystemParent;
+
+typedef MountUnmountResultCallback<VirtualFileSystemParent>
+VirtualFileSystemParentMountUnmountCallback;
 
 class VirtualFileSystemParent final : public nsISupports
                                     , public PVirtualFileSystemParent
@@ -41,7 +43,6 @@ public:
 
   virtual PVirtualFileSystemRequestParent* AllocPVirtualFileSystemRequestParent(
     const uint32_t& aRequestId,
-    const uint32_t& aRequestType,
     const nsString& aFileSystemId,
     const VirtualFileSystemIPCRequestedOptions& aOptions) override;
 
@@ -51,22 +52,34 @@ public:
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
 private:
-  friend class MountUnmountResultCallback;
+  friend VirtualFileSystemParentMountUnmountCallback;
 
   virtual ~VirtualFileSystemParent();
+  void NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded);
 
+  bool mActorDestroyed;
   RefPtr<BaseVirtualFileSystemService> mVirtualFileSystemService;
 };
 
 class VirtualFileSystemRequestParent final : public PVirtualFileSystemRequestParent
 {
 public:
-  VirtualFileSystemRequestParent();
+  explicit VirtualFileSystemRequestParent(
+    BaseVirtualFileSystemRequestManager* aRequestManager);
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
+  virtual bool RecvResponseData(
+    const uint32_t& aRequestId,
+    const VirtualFileSystemResponseValue& aResponse) override;
+
+  virtual bool Recv__delete__() override;
+
 private:
   virtual ~VirtualFileSystemRequestParent();
+
+  bool mActorDestroyed;
+  RefPtr<BaseVirtualFileSystemRequestManager> mRequestManager;
 };
 
 } // namespace virtualfilesystem

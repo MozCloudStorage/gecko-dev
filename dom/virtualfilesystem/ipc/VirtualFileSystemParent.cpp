@@ -14,52 +14,46 @@ namespace mozilla {
 namespace dom {
 namespace virtualfilesystem {
 
-class MountUnmountResultCallback final : public nsIVirtualFileSystemCallback
+class VirtualFileSystemParentEventDispatcher final
+  : public FileSystemProviderProxy<VirtualFileSystemParent>
+  , public BaseFileSystemProviderEventDispatcher
 {
 public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIVIRTUALFILESYSTEMCALLBACK
+  explicit VirtualFileSystemParentEventDispatcher(VirtualFileSystemParent* aProvider)
+    : FileSystemProviderProxy(aProvider) {}
 
-  explicit MountUnmountResultCallback(VirtualFileSystemParent* aParent)
-    : mVirtualFileSystemParent(aParent)
-  {}
-  void Forget() { mVirtualFileSystemParent = nullptr; }
+  virtual nsresult DispatchFileSystemProviderEvent(
+    uint32_t aRequestId,
+    const nsAString& aFileSystemId,
+    const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions,
+    virtualfilesystem::BaseVirtualFileSystemRequestManager* aRequestManager) override;
 
 private:
-  ~MountUnmountResultCallback() = default;
+  virtual ~VirtualFileSystemParentEventDispatcher() = default;
 
-  VirtualFileSystemParent* MOZ_NON_OWNING_REF mVirtualFileSystemParent;
 };
 
-NS_IMPL_ISUPPORTS(MountUnmountResultCallback,
-                  nsIVirtualFileSystemCallback)
-
-NS_IMETHODIMP
-MountUnmountResultCallback::OnSuccess(uint32_t aRequestId,
-                                      nsIVirtualFileSystemRequestValue* aValue,
-                                      bool aHasMore)
+nsresult
+VirtualFileSystemParentEventDispatcher::DispatchFileSystemProviderEvent(
+  uint32_t aRequestId,
+  const nsAString& aFileSystemId,
+  const virtualfilesystem::VirtualFileSystemIPCRequestedOptions& aOptions,
+  virtualfilesystem::BaseVirtualFileSystemRequestManager* aRequestManager)
 {
-  Unused << aValue;
-  Unused << aHasMore;
-
-  Unused << mVirtualFileSystemParent->SendNotifyMountUnmountResult(aRequestId,
-                                                                   true);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-MountUnmountResultCallback::OnError(uint32_t aRequestId, uint32_t aErrorCode)
-{
-  Unused << aErrorCode;
-
-  Unused << mVirtualFileSystemParent->SendNotifyMountUnmountResult(aRequestId,
-                                                                   false);
-  return NS_OK;
+  PVirtualFileSystemRequestParent* actor =
+    new VirtualFileSystemRequestParent(aRequestManager);
+  bool res = mFileSystemProvider->SendPVirtualFileSystemRequestConstructor(
+    actor,
+    aRequestId,
+    nsString(aFileSystemId),
+    aOptions);
+  return res ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMPL_ISUPPORTS0(VirtualFileSystemParent)
 
 VirtualFileSystemParent::VirtualFileSystemParent()
+  : mActorDestroyed(false)
 {
   MOZ_COUNT_CTOR(VirtualFileSystemParent);
 }
@@ -94,13 +88,11 @@ VirtualFileSystemParent::RecvMount(
   const uint32_t& aRequestId,
   const MountOptions& aOptions)
 {
-  RefPtr<nsVirtualFileSystemRequestManager> manager =
-    new nsVirtualFileSystemRequestManager(nullptr);
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
-    new MountUnmountResultCallback(this);
+    new VirtualFileSystemParentMountUnmountCallback(this);
   if (NS_FAILED(mVirtualFileSystemService->Mount(aRequestId,
                                                  aOptions,
-                                                 manager,
+                                                 new VirtualFileSystemParentEventDispatcher(this),
                                                  callback))) {
     return false;
   }
@@ -113,7 +105,7 @@ VirtualFileSystemParent::RecvUnmount(
   const UnmountOptions& aOptions)
 {
   nsCOMPtr<nsIVirtualFileSystemCallback> callback =
-    new MountUnmountResultCallback(this);
+    new VirtualFileSystemParentMountUnmountCallback(this);
   if (NS_FAILED(mVirtualFileSystemService->Unmount(aRequestId, aOptions, callback))) {
     return false;
   }
@@ -123,7 +115,6 @@ VirtualFileSystemParent::RecvUnmount(
 PVirtualFileSystemRequestParent*
 VirtualFileSystemParent::AllocPVirtualFileSystemRequestParent(
   const uint32_t& aRequestId,
-  const uint32_t& aRequestType,
   const nsString& aFileSystemId,
   const VirtualFileSystemIPCRequestedOptions& aOptions)
 {
@@ -134,16 +125,30 @@ bool
 VirtualFileSystemParent::DeallocPVirtualFileSystemRequestParent(
   PVirtualFileSystemRequestParent* aActor)
 {
+  delete aActor;
   return true;
 }
 
 void
 VirtualFileSystemParent::ActorDestroy(ActorDestroyReason aWhy)
 {
-
+  mActorDestroyed = true;
 }
 
-VirtualFileSystemRequestParent::VirtualFileSystemRequestParent()
+void
+VirtualFileSystemParent::NotifyMountUnmountResult(uint32_t aRequestId, bool aSucceeded)
+{
+  if (mActorDestroyed) {
+    return;
+  }
+
+  Unused << SendNotifyMountUnmountResult(aRequestId, aSucceeded);
+}
+
+VirtualFileSystemRequestParent::VirtualFileSystemRequestParent(
+  BaseVirtualFileSystemRequestManager* aRequestManager)
+  : mActorDestroyed(false)
+  , mRequestManager(aRequestManager)
 {
   MOZ_COUNT_CTOR(VirtualFileSystemRequestParent);
 }
@@ -156,7 +161,79 @@ VirtualFileSystemRequestParent::~VirtualFileSystemRequestParent()
 void
 VirtualFileSystemRequestParent::ActorDestroy(ActorDestroyReason aWhy)
 {
+  mActorDestroyed = true;
+}
 
+bool
+VirtualFileSystemRequestParent::RecvResponseData(
+  const uint32_t& aRequestId,
+  const VirtualFileSystemResponseValue& aResponse)
+{
+  if (mActorDestroyed) {
+    return true;
+  }
+
+  nsresult rv = NS_OK;
+  switch (aResponse.type()) {
+    case VirtualFileSystemResponseValue::TVirtualFileSystemErrorResponse:
+    {
+      VirtualFileSystemErrorResponse response = aResponse;
+      rv = mRequestManager->RejectRequest(aRequestId,
+                                          response.error());
+      break;
+    }
+    case VirtualFileSystemResponseValue::TVirtualFileSystemSuccessResponse:
+    {
+      rv = mRequestManager->FufillRequest(aRequestId,
+                                          nullptr,
+                                          false);
+      break;
+    }
+    case VirtualFileSystemResponseValue::TVirtualFileSystemGetMetadataResponse:
+    {
+      VirtualFileSystemGetMetadataResponse response = aResponse;
+      nsCOMPtr<nsIVirtualFileSystemGetMetadataRequestValue> value =
+        new nsVirtualFileSystemGetMetadataRequestValue(response.metadata());
+      rv = mRequestManager->FufillRequest(aRequestId,
+                                          value,
+                                          response.hasMore());
+      break;
+    }
+    case VirtualFileSystemResponseValue::TVirtualFileSystemReadFileResponse:
+    {
+      VirtualFileSystemReadFileResponse response = aResponse;
+      nsCOMPtr<nsIVirtualFileSystemReadFileRequestValue> value =
+        new nsVirtualFileSystemReadFileRequestValue(response.data());
+      rv = mRequestManager->FufillRequest(aRequestId,
+                                          value,
+                                          response.hasMore());
+      break;
+    }
+    case VirtualFileSystemResponseValue::TVirtualFileSystemReadDirectoryResponse:
+    {
+      VirtualFileSystemReadDirectoryResponse response = aResponse;
+      nsCOMPtr<nsIVirtualFileSystemReadDirectoryRequestValue> value =
+        new nsVirtualFileSystemReadDirectoryRequestValue(Move(response.entries()));
+      rv = mRequestManager->FufillRequest(aRequestId,
+                                          value,
+                                          response.hasMore());
+      break;
+    }
+    default:
+      NS_NOTREACHED("Unexpected response type");
+      return false;
+  }
+
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return false;
+  }
+  return true;
+}
+
+bool
+VirtualFileSystemRequestParent::Recv__delete__()
+{
+  return true;
 }
 
 } // namespace virtualfilesystem
